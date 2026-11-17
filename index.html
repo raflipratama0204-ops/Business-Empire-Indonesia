@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Business Empire: RichMan - Indonesia Edition</title>
+  <!-- App Favicon & PWA Icons -->
+  <link rel="icon" type="image/png" href="images/app_logo.png">
+  <link rel="apple-touch-icon" href="images/app_logo.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Business Empire">
+  <meta name="theme-color" content="#020617">
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-slate-950 text-slate-100 flex items-center justify-center min-h-screen">
+
+  <!-- Main Phone/App Container -->
+  <div id="app-container" class="relative flex flex-col bg-slate-900 border border-slate-800 shadow-2xl">
+    
+    <!-- Floating Toast Notifications -->
+    <div id="toast-container"></div>
+
+    <!-- Header / Status Bar -->
+    <header class="app-header p-3 pb-2 sm:p-4 sm:pb-2 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 sticky top-0 z-20">
+      
+      <!-- Top Row: Rank & Speed Controls -->
+      <div class="flex items-center justify-between gap-1 mb-2">
+        <div class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 text-xs min-w-0 flex-shrink truncate">
+          <span id="header-rank-badge" class="text-xs sm:text-sm flex-shrink-0">🌱</span>
+          <span id="header-rank-title" class="font-bold text-slate-200 text-[11px] sm:text-xs truncate">Pemula Finansial</span>
+        </div>
+
+        <div class="flex items-center gap-1 flex-shrink-0">
+          <span id="header-game-time" class="text-[10px] sm:text-[11px] font-mono text-slate-400 mr-0.5 whitespace-nowrap">Hari 1, 00:00</span>
+          
+          <!-- Speed Controls -->
+          <div class="flex items-center bg-slate-900 p-0.5 rounded-lg border border-slate-800">
+            <button id="speed-btn-1" onclick="game.setSpeed(1)" class="px-1.5 py-0.5 text-[10px] sm:text-xs font-bold rounded bg-emerald-500 text-slate-950">1x</button>
+            <button id="speed-btn-5" onclick="game.setSpeed(5)" class="px-1.5 py-0.5 text-[10px] sm:text-xs font-semibold rounded bg-slate-800 text-slate-300 hover:bg-slate-700">5x</button>
+            <button id="speed-btn-60" onclick="game.setSpeed(60)" class="px-1.5 py-0.5 text-[10px] sm:text-xs font-semibold rounded bg-slate-800 text-slate-300 hover:bg-slate-700">60x</button>
+          </div>
+
+          <!-- Skip Hour Button -->
+          <button onclick="game.skipHour()" title="Lewati 1 Jam" class="btn-press px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-lg bg-blue-600/30 hover:bg-blue-600/50 border border-blue-500/40 text-blue-300 text-[10px] sm:text-xs font-bold flex items-center gap-0.5 whitespace-nowrap">
+            ⏩ +1J
+          </button>
+
+          <!-- Audio Toggle -->
+          <button id="sound-toggle-btn" onclick="const enabled = sound.toggle(); this.innerText = enabled ? '🔊' : '🔇';" class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-slate-800 flex items-center justify-center text-xs text-slate-300 hover:bg-slate-700 flex-shrink-0">
+            🔊
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Balance Dashboard Card (Hanya muncul di Tab Beranda / Home) -->
+      <div id="header-networth-card" class="p-3.5 rounded-2xl bg-gradient-to-br from-slate-800/95 to-slate-900 border border-slate-700/60 shadow-lg mb-2 view-transition">
+        <div class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Total Kekayaan Bersih (Net Worth)</div>
+        <div id="header-networth" class="text-2xl font-black text-white glow-green tracking-tight my-0.5">Rp 8.000.000</div>
+      </div>
+
+      <!-- Compact Cash & Hourly Bar (Selalu ada di setiap tab untuk info uang yang dimiliki) -->
+      <div id="header-cash-bar" class="p-2.5 px-3 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between text-xs shadow-sm">
+        <div>
+          <span class="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Uang Kas Tunai</span>
+          <span id="header-cash" class="font-black text-emerald-400 text-sm">Rp 8.000.000</span>
+        </div>
+        <div class="text-right">
+          <span class="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Arus Kas Masuk</span>
+          <span id="header-hourly" class="font-bold text-slate-200 text-xs">+Rp 0/jam</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Scrollable Tab Content Container -->
+    <main class="app-main-content flex-1 overflow-y-auto px-3.5 py-3 sm:px-4 sm:py-3 space-y-3 pb-24">
+      
+      <!-- TAB 0: BERANDA / HOME (Menampilkan Total Kekayaan Bersih, Ringkasan Portofolio & Freelance) -->
+      <section id="tab-home" class="tab-content-panel space-y-3">
+        <!-- Quick Side Hustle / Clicker Widget -->
+        <div class="glass-panel p-3 rounded-2xl border border-slate-800 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-lg">
+              💼
+            </div>
+            <div>
+              <div class="font-bold text-white text-xs">Proyek Freelance Cepat</div>
+              <div id="click-reward-val" class="text-[11px] text-emerald-400 font-semibold">+Rp 50.000 / klik</div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button onclick="game.upgradeClickWork()" title="Tingkatkan Tarif Freelance" class="btn-press px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700">
+              ⚡ Upgrade
+            </button>
+            <button id="hustle-click-btn" class="btn-press px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-md shadow-emerald-500/20 flex items-center gap-1">
+              <span>Kerjakan!</span> 🚀
+            </button>
+          </div>
+        </div>
+
+        <!-- Breakdown Total Kekayaan -->
+        <div class="glass-panel p-4 rounded-2xl border border-slate-800 space-y-2.5 shadow-md">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <h3 class="text-xs uppercase tracking-wider font-extrabold text-slate-400">Komposisi Kekayaan Finansial</h3>
+            <span class="text-[11px] text-slate-500">Valuasi Real-Time</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5 text-xs">
+            <div class="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80">
+              <span class="text-slate-400 block text-[11px]">💵 Kas Likuid</span>
+              <span id="home-val-cash" class="font-bold text-white">Rp 8.000.000</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80">
+              <span class="text-slate-400 block text-[11px]">🏢 Valuasi Bisnis</span>
+              <span id="home-val-biz" class="font-bold text-emerald-400">Rp 0</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80">
+              <span class="text-slate-400 block text-[11px]">📈 Portofolio Saham</span>
+              <span id="home-val-stocks" class="font-bold text-emerald-400">Rp 0</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80">
+              <span class="text-slate-400 block text-[11px]">🪙 Aset Kripto</span>
+              <span id="home-val-crypto" class="font-bold text-amber-400">Rp 0</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80">
+              <span class="text-slate-400 block text-[11px]">🏠 Portofolio Real Estate</span>
+              <span id="home-val-property" class="font-bold text-blue-400">Rp 0</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80">
+              <span class="text-slate-400 block text-[11px]">🏎️ Koleksi Kemewahan</span>
+              <span id="home-val-luxury" class="font-bold text-purple-400">Rp 0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Kartu Target Pangkat Berikutnya -->
+        <div id="home-rank-card" class="glass-panel p-3.5 rounded-2xl border border-slate-800 space-y-2">
+          <!-- Populated by JavaScript -->
+        </div>
+
+        <!-- KEPATUHAN PAJAK & KANTOR PELAYANAN PAJAK (DJP) -->
+        <div id="home-tax-widget" class="glass-panel p-4 rounded-2xl border border-slate-800 space-y-3 shadow-lg">
+          <!-- Populated by JavaScript renderTaxWidget() -->
+        </div>
+      </section>
+
+      <!-- TAB 1: BISNIS -->
+      <section id="tab-business" class="tab-content-panel hidden">
+        
+        <!-- 1. Bisnis yang Sudah Dimiliki (Default View) -->
+        <div id="biz-view-owned" class="view-transition">
+          <!-- Tax Warning / Suspension Banner -->
+          <div id="biz-tax-banner" class="hidden mb-3"></div>
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h2 class="text-xs uppercase tracking-wider font-extrabold text-slate-400">Kerajaan Bisnis Aktif</h2>
+              <span id="biz-owned-count" class="text-[11px] text-emerald-400 font-semibold">0 Bisnis Beroperasi</span>
+            </div>
+            <button onclick="game.showBusinessCatalog()" class="btn-press px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-md shadow-emerald-500/20 flex items-center gap-1.5">
+              <span>+ Buka Bisnis Baru</span>
+            </button>
+          </div>
+
+          <div id="business-owned-list">
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+
+        <!-- 2. Katalog Pemilihan Sektor Bisnis Baru -->
+        <div id="biz-view-catalog" class="hidden view-transition">
+          <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
+            <button onclick="game.showOwnedBusinesses()" class="btn-press px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center gap-1">
+              <span>← Kembali ke Bisnis Saya</span>
+            </button>
+            <h2 class="text-xs uppercase tracking-wider font-extrabold text-slate-400">Pilih Sektor Usaha Baru</h2>
+          </div>
+
+          <div id="business-catalog-list">
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+
+        <!-- 3. Detail Manajemen Bisnis (Fleet Taksi / Logistik / Bank / Toko) -->
+        <div id="biz-view-detail" class="hidden view-transition">
+          <!-- Populated dynamically when clicking 'Kelola Bisnis' -->
+        </div>
+
+      </section>
+
+      <!-- TAB 2: INVESTASI (Saham, Kripto, & Properti) -->
+      <section id="tab-invest" class="tab-content-panel hidden">
+        <!-- Sub-tabs for Investments -->
+        <div class="flex items-center justify-between mb-3 bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <button id="invest-sub-btn-stocks" onclick="game.switchInvestSubTab('stocks')" class="flex-1 py-1.5 rounded-lg bg-slate-800 text-white font-bold text-xs shadow transition">
+            📈 Saham
+          </button>
+          <button id="invest-sub-btn-crypto" onclick="game.switchInvestSubTab('crypto')" class="flex-1 py-1.5 rounded-lg text-slate-400 hover:text-white font-semibold text-xs transition">
+            🪙 Kripto
+          </button>
+          <button id="invest-sub-btn-commodity" onclick="game.switchInvestSubTab('commodity')" class="flex-1 py-1.5 rounded-lg text-slate-400 hover:text-white font-semibold text-xs transition">
+            🛢️ Komoditas
+          </button>
+          <button id="invest-sub-btn-property" onclick="game.switchInvestSubTab('property')" class="flex-1 py-1.5 rounded-lg text-slate-400 hover:text-white font-semibold text-xs transition">
+            🏠 Properti
+          </button>
+        </div>
+
+        <!-- 1. Bursa Saham -->
+        <div id="invest-stocks-sec" class="view-transition">
+          <!-- View 1: Saham yang Dimiliki (Default / Home Saham) -->
+          <div id="stocks-view-portfolio" class="view-transition">
+            <!-- Tax Alert Banner -->
+            <div id="stocks-tax-banner" class="hidden mb-3"></div>
+
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h3 class="text-xs uppercase tracking-wider font-extrabold text-slate-400">Portofolio Saham Saya</h3>
+                <span id="stocks-portfolio-count" class="text-[11px] text-emerald-400 font-semibold">0 Saham Dimiliki</span>
+              </div>
+              <button onclick="game.setStockView('market')" class="btn-press px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-md shadow-emerald-500/20 flex items-center gap-1.5">
+                <span>+ Beli Saham Baru</span>
+              </button>
+            </div>
+
+            <!-- Saham Summary Card -->
+            <div id="stocks-summary-card" class="glass-panel p-3.5 rounded-2xl border border-slate-800 mb-3 space-y-2">
+              <!-- Populated by JavaScript -->
+            </div>
+
+            <div id="stock-portfolio-container">
+              <!-- Populated by JavaScript -->
+            </div>
+          </div>
+
+          <!-- View 2: Bursa / Tempat Pembelian Saham -->
+          <div id="stocks-view-market" class="hidden view-transition">
+            <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
+              <button onclick="game.setStockView('portfolio')" class="btn-press px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center gap-1">
+                <span>← Kembali ke Portofolio Saham</span>
+              </button>
+              <h3 class="text-xs uppercase tracking-wider font-extrabold text-slate-400">Bursa Efek & Saham</h3>
+            </div>
+
+            <div id="stock-list-container">
+              <!-- Populated by JavaScript -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Aset Kripto -->
+        <div id="invest-crypto-sec" class="hidden view-transition">
+          <!-- View 1: Kripto yang Dimiliki (Default / Home Kripto) -->
+          <div id="crypto-view-portfolio" class="view-transition">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h3 class="text-xs uppercase tracking-wider font-extrabold text-slate-400">Dompet Kripto Saya</h3>
+                <span id="crypto-portfolio-count" class="text-[11px] text-amber-400 font-semibold">0 Aset Dimiliki</span>
+              </div>
+              <button onclick="game.setCryptoView('market')" class="btn-press px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-md shadow-amber-400/20 flex items-center gap-1.5">
+                <span>+ Beli Kripto Baru</span>
+              </button>
+            </div>
+
+            <!-- Kripto Summary Card -->
+            <div id="crypto-summary-card" class="glass-panel p-3.5 rounded-2xl border border-slate-800 mb-3 space-y-2">
+              <!-- Populated by JavaScript -->
+            </div>
+
+            <div id="crypto-portfolio-container">
+              <!-- Populated by JavaScript -->
+            </div>
+          </div>
+
+          <!-- View 2: Pasar Kripto -->
+          <div id="crypto-view-market" class="hidden view-transition">
+            <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
+              <button onclick="game.setCryptoView('portfolio')" class="btn-press px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center gap-1">
+                <span>← Kembali ke Dompet Kripto</span>
+              </button>
+              <h3 class="text-xs uppercase tracking-wider font-extrabold text-slate-400">Pasar Kripto Global</h3>
+            </div>
+
+            <div id="crypto-list-container">
+              <!-- Populated by JavaScript -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 2.5 Bursa Trading Komoditas Global (Long / Short) -->
+        <div id="invest-commodity-sec" class="hidden view-transition space-y-4">
+          <!-- Populated by JavaScript renderCommodities() -->
+        </div>
+
+        <!-- 3. Portofolio Properti Global (Digabung ke Investasi) -->
+        <div id="invest-property-sec" class="hidden view-transition">
+          <!-- View 1: Properti yang Dimiliki (Default / Home Properti) -->
+          <div id="property-view-portfolio" class="view-transition">
+            <!-- Tax Alert Banner -->
+            <div id="property-tax-banner" class="hidden mb-3"></div>
+
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h3 class="text-xs uppercase tracking-wider font-extrabold text-slate-400">Portofolio Properti Saya</h3>
+                <span id="property-portfolio-count" class="text-[11px] text-blue-400 font-semibold">0 Unit Dimiliki</span>
+              </div>
+              <button onclick="game.setPropertyView('catalog')" class="btn-press px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-md shadow-emerald-500/20 flex items-center gap-1.5">
+                <span>+ Beli Properti Baru</span>
+              </button>
+            </div>
+
+            <!-- Properti Summary Card (Sewa Kotor, Perawatan, Net Rent) -->
+            <div id="property-summary-card" class="glass-panel p-3.5 rounded-2xl border border-slate-800 mb-3 space-y-2">
+              <!-- Populated by JavaScript -->
+            </div>
+
+            <div id="property-portfolio-container">
+              <!-- Populated by JavaScript -->
+            </div>
+          </div>
+
+          <!-- View 2: Katalog Pembelian Properti -->
+          <div id="property-view-catalog" class="hidden view-transition">
+            <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
+              <button onclick="game.setPropertyView('portfolio')" class="btn-press px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center gap-1">
+                <span>← Kembali ke Properti Saya</span>
+              </button>
+              <h3 class="text-xs uppercase tracking-wider font-extrabold text-slate-400">Katalog Real Estate</h3>
+            </div>
+
+            <div id="realestate-list-container">
+              <!-- Populated by JavaScript -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: KEMEWAHAN (Lifestyle, Motor, Mobil, Mansion & Koleksi) -->
+      <section id="tab-luxury" class="tab-content-panel hidden">
+        <!-- View 1: Koleksi Kemewahan Saya (Default / Portofolio Kemewahan) -->
+        <div id="luxury-view-owned" class="view-transition">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h2 class="text-xs uppercase tracking-wider font-extrabold text-slate-400">Koleksi Kemewahan Saya</h2>
+              <span id="luxury-owned-count" class="text-[11px] text-amber-400 font-semibold">0 Aset Dimiliki</span>
+            </div>
+            <button onclick="game.setLuxuryView('catalog')" class="btn-press px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-md shadow-amber-400/20 flex items-center gap-1.5">
+              <span>+ Beli Aset Baru</span>
+            </button>
+          </div>
+
+          <!-- Ringkasan Nilai & Prestise Koleksi -->
+          <div id="luxury-summary-card" class="glass-panel p-3.5 rounded-2xl border border-slate-800 mb-3 space-y-2">
+            <!-- Populated by JavaScript -->
+          </div>
+
+          <div id="luxury-owned-container">
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+
+        <!-- View 2: Katalog & Showroom Pembelian Kemewahan -->
+        <div id="luxury-view-catalog" class="hidden view-transition">
+          <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
+            <button onclick="game.setLuxuryView('owned')" class="btn-press px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center gap-1">
+              <span>← Kembali ke Koleksi Saya</span>
+            </button>
+            <h2 class="text-xs uppercase tracking-wider font-extrabold text-slate-400">Showroom Kemewahan</h2>
+          </div>
+
+          <div id="luxury-catalog-container">
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: STATISTIK & PENGATURAN -->
+      <section id="tab-bank" class="tab-content-panel hidden space-y-3">
+        <h2 class="text-xs uppercase tracking-wider font-extrabold text-slate-400">Ringkasan Kerajaan Finansial</h2>
+        
+        <div id="stats-summary-card">
+          <!-- Populated by JavaScript -->
+        </div>
+
+        <div class="glass-panel p-4 rounded-2xl border border-slate-800 space-y-3">
+          <h3 class="text-xs font-bold text-slate-300 uppercase">Manajemen Data Game</h3>
+          <div class="flex gap-2">
+            <button onclick="game.saveGame(); game.showToast('Data permainan berhasil disimpan!', 'success');" class="btn-press flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold">
+              💾 Simpan Manual
+            </button>
+            <button onclick="game.resetGame()" class="btn-press flex-1 py-2 rounded-xl bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/30 text-xs font-bold">
+              🗑️ Reset Data
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar: Beranda di Tengah & Ditonjolkan (Bisnis, Investasi, Beranda, Kemewahan, Profil) -->
+    <nav id="bottom-nav" class="app-bottom-nav absolute bottom-0 left-0 right-0 h-20 bg-slate-950/95 backdrop-blur-md border-t border-slate-800/80 px-2 flex items-center justify-around z-20">
+      <!-- 1. Bisnis -->
+      <button data-tab="business" class="nav-tab-btn flex flex-col items-center justify-center flex-1 py-1 text-slate-400 border-t-2 border-transparent transition">
+        <span class="text-xl">🏢</span>
+        <span class="text-[10px] font-bold mt-0.5">Bisnis</span>
+      </button>
+
+      <!-- 2. Investasi -->
+      <button data-tab="invest" class="nav-tab-btn flex flex-col items-center justify-center flex-1 py-1 text-slate-400 border-t-2 border-transparent transition">
+        <span class="text-xl">📈</span>
+        <span class="text-[10px] font-bold mt-0.5">Investasi</span>
+      </button>
+
+      <!-- 3. Beranda (Tengah & Menonjol) -->
+      <button data-tab="home" class="nav-tab-btn active-home flex flex-col items-center justify-center flex-1 py-1 relative -top-3.5 group transition">
+        <div id="nav-home-icon-circle" class="w-13 h-13 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 p-0.5 shadow-xl shadow-emerald-500/40 border-4 border-slate-950 transition-all duration-300 flex items-center justify-center">
+          <div class="w-full h-full rounded-full bg-slate-950/85 backdrop-blur-sm flex items-center justify-center text-2xl">
+            🏠
+          </div>
+        </div>
+        <span id="nav-home-text" class="text-[10px] font-black mt-1 text-emerald-400 tracking-tight transition">Beranda</span>
+      </button>
+
+      <!-- 4. Kemewahan -->
+      <button data-tab="luxury" class="nav-tab-btn flex flex-col items-center justify-center flex-1 py-1 text-slate-400 border-t-2 border-transparent transition">
+        <span class="text-xl">🏎️</span>
+        <span class="text-[10px] font-bold mt-0.5">Kemewahan</span>
+      </button>
+
+      <!-- 5. Profil -->
+      <button data-tab="bank" class="nav-tab-btn flex flex-col items-center justify-center flex-1 py-1 text-slate-400 border-t-2 border-transparent transition">
+        <span class="text-xl">👤</span>
+        <span class="text-[10px] font-bold mt-0.5">Profil</span>
+      </button>
+    </nav>
+
+    <!-- MODAL: DIRIKAN / BUKA BISNIS BARU DENGAN NAMA KUSTOM -->
+    <div id="found-biz-modal" class="modal-backdrop hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="modal-card bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-sm p-4 shadow-2xl relative">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <h3 id="found-biz-modal-title" class="font-bold text-white text-sm">Dirikan Bisnis Baru</h3>
+          <button onclick="game.closeFoundBizModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+        </div>
+
+        <div class="py-3 space-y-3 text-xs">
+          <!-- Subtype Options (For Toko & Fashion) -->
+          <div id="found-biz-subtype-container" class="hidden space-y-2">
+            <label class="text-slate-300 font-bold block">Pilih Skala / Jenis Usaha:</label>
+            <div id="found-biz-subtypes-list" class="space-y-1.5"></div>
+          </div>
+
+          <!-- Business Name Input -->
+          <div>
+            <label class="text-slate-300 font-bold block mb-1">Nama Perusahaan / Bisnis Anda:</label>
+            <input type="text" id="found-biz-name-input" maxlength="35" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold text-xs focus:outline-none focus:border-emerald-500" placeholder="Contoh: Toko Berkah Mandiri">
+            <span class="text-[10px] text-slate-500 mt-1 block">Bebas beri nama unik sesuai keinginan Anda.</span>
+          </div>
+
+          <!-- Cost & Income summary -->
+          <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+            <div class="flex justify-between items-center">
+              <span class="text-slate-400">Modal Pendirian:</span>
+              <span id="found-biz-cost-display" class="font-extrabold text-white">Rp 0</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-slate-400">Estimasi Pendapatan:</span>
+              <span id="found-biz-rev-display" class="font-bold text-emerald-400">+Rp 0/jam</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-2 mt-2">
+          <button onclick="game.closeFoundBizModal()" class="btn-press flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs">
+            Batal
+          </button>
+          <button onclick="game.confirmFoundBusiness()" class="btn-press flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-md shadow-emerald-500/20">
+            Buka Bisnis Sekarang!
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: MANAJEMEN BANK (RichMan Style) -->
+    <div id="bank-modal" class="modal-backdrop hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="modal-card bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-sm p-4 shadow-2xl relative">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <h3 id="bank-modal-title" class="font-bold text-white text-sm">Manajemen Bank</h3>
+          <button onclick="game.closeBankModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+        </div>
+
+        <div class="py-3 space-y-3 text-xs">
+          <!-- Brankas / Vault Info -->
+          <div class="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
+            <div class="text-slate-400 text-[11px]">Cadangan Kas Brankas Bank:</div>
+            <div id="bank-vault-display" class="text-lg font-black text-emerald-400">Rp 0</div>
+            <div class="flex gap-2 mt-2">
+              <button onclick="game.addVaultCapital(game.bankDetailId, 1000000000)" class="btn-press flex-1 py-1.5 rounded-lg bg-emerald-500 text-slate-950 font-bold text-[11px]">
+                + Setor 1 M
+              </button>
+              <button onclick="game.withdrawVaultCapital(game.bankDetailId, 1000000000)" class="btn-press flex-1 py-1.5 rounded-lg bg-slate-700 text-slate-200 font-bold text-[11px]">
+                - Tarik 1 M
+              </button>
+            </div>
+          </div>
+
+          <!-- Simpanan Nasabah (DPK) & Syarat Upgrade -->
+          <div class="p-3 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
+            <div class="flex justify-between items-center">
+              <div>
+                <span class="text-slate-400 text-[10px] uppercase font-bold block">Simpanan Nasabah (DPK):</span>
+                <span id="bank-customer-deposits" class="text-sm font-black text-white">Rp 0</span>
+              </div>
+              <div class="text-right">
+                <span class="text-slate-400 text-[10px] uppercase font-bold block">Syarat Lvl Berikutnya:</span>
+                <span id="bank-required-deposits" class="text-xs font-black text-amber-400">Rp 0</span>
+              </div>
+            </div>
+            <div class="space-y-1">
+              <div class="flex justify-between text-[10px]">
+                <span id="bank-dpk-status-text" class="text-slate-400">Ketercapaian Syarat:</span>
+                <span id="bank-dpk-percent" class="font-bold text-white">0%</span>
+              </div>
+              <div class="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
+                <div id="bank-dpk-progress" class="h-full bg-emerald-400 rounded-full transition-all" style="width: 0%"></div>
+              </div>
+            </div>
+            <div id="bank-deposit-growth-rate" class="flex justify-between items-center text-[11px] pt-1.5 border-t border-slate-700/60 text-blue-400">
+              <span>Pertumbuhan Otomatis:</span>
+              <span class="font-bold">+Rp 0/jam</span>
+            </div>
+            <div class="text-[10px] text-slate-400 pt-0.5">
+              Simpanan bertambah sendiri setiap jam & saat offline. Naikkan bunga deposito untuk mempercepat aliran dana nasabah!
+            </div>
+          </div>
+
+          <!-- Deposit Rate Slider -->
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-slate-300 font-medium">Bunga Deposito Nasabah:</span>
+              <span id="bank-dep-val" class="font-bold text-blue-400">5.0%</span>
+            </div>
+            <input type="range" id="bank-dep-slider" min="1.0" max="10.0" step="0.5" oninput="game.adjustBankRate(game.bankDetailId, 'deposit', this.value); document.getElementById('bank-dep-val').innerText = this.value + '%'; game.openBankModal(game.bankDetailId);">
+            <span class="text-[10px] text-slate-500">Makin tinggi, simpanan nasabah yang masuk setiap jam makin deras.</span>
+          </div>
+
+          <!-- Credit Rate Slider -->
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-slate-300 font-medium">Bunga Kredit Pinjaman:</span>
+              <span id="bank-cred-val" class="font-bold text-amber-400">11.5%</span>
+            </div>
+            <input type="range" id="bank-cred-slider" min="5.0" max="25.0" step="0.5" oninput="game.adjustBankRate(game.bankDetailId, 'credit', this.value); document.getElementById('bank-cred-val').innerText = this.value + '%'; game.openBankModal(game.bankDetailId);">
+            <span class="text-[10px] text-slate-500">Bunga pinjaman yang ditagih ke peminjam.</span>
+          </div>
+
+          <!-- Projected Profit -->
+          <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center">
+            <span class="text-slate-400">Estimasi Laba Bersih:</span>
+            <span id="bank-projected-profit" class="font-bold text-emerald-400 text-sm">+Rp 0/jam</span>
+          </div>
+        </div>
+
+        <button onclick="game.closeBankModal()" class="w-full py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs mt-2">
+          Simpan & Terapkan Suku Bunga
+        </button>
+      </div>
+    </div>
+
+    <!-- MODAL: TRADING SAHAM (DENGAN INPUT JUMLAH & ESTIMASI) -->
+    <div id="stock-modal" class="modal-backdrop hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="modal-card bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-sm p-4 shadow-2xl relative">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <h3 id="stock-modal-title" class="font-bold text-white text-sm">Trading Saham</h3>
+          <button onclick="game.closeStockModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+        </div>
+
+        <div class="py-3 space-y-2.5 text-xs">
+          <div class="flex justify-between">
+            <span class="text-slate-400">Harga Sekarang:</span>
+            <span id="stock-modal-price" class="font-bold text-white">Rp 0</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Saham Dimiliki:</span>
+            <span id="stock-modal-owned" class="font-bold text-emerald-400">0 Lembar</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Yield Dividen / Jam:</span>
+            <span id="stock-modal-dividend" class="font-bold text-blue-400">+0.00%/jam</span>
+          </div>
+
+          <!-- Informasi Daya Beli Kas -->
+          <div class="flex justify-between items-center bg-slate-950 p-2 rounded-xl border border-slate-800">
+            <span class="text-slate-400 text-[11px]">Maksimal Dapat Dibeli:</span>
+            <span id="stock-modal-max-buy" class="font-bold text-amber-400 text-[11px]">0 Lembar</span>
+          </div>
+
+          <!-- Section Beli Saham dengan Input -->
+          <div class="pt-2 border-t border-slate-800 space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-[11px] text-slate-300 font-bold">Beli Saham (Input Jumlah):</span>
+              <span id="stock-buy-preview" class="text-[11px] font-bold text-emerald-400">Estimasi: Rp 0</span>
+            </div>
+            <div class="flex gap-2">
+              <input type="number" id="stock-buy-input" min="1" placeholder="Jumlah lembar..." oninput="game.onStockBuyInputChange(this.value)" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-emerald-500">
+              <button onclick="game.buyStockCustom()" class="btn-press px-4 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs">Beli</button>
+            </div>
+            <div class="grid grid-cols-4 gap-1.5">
+              <button onclick="game.setStockBuyInput(10)" class="btn-press py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold">+10</button>
+              <button onclick="game.setStockBuyInput(100)" class="btn-press py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold">+100</button>
+              <button onclick="game.setStockBuyInput(1000)" class="btn-press py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold">+1.000</button>
+              <button onclick="game.setStockBuyInput('max')" class="btn-press py-1.5 rounded-lg bg-emerald-500 text-slate-950 text-xs font-black">Maksimal</button>
+            </div>
+          </div>
+
+          <!-- Section Jual Saham dengan Input -->
+          <div class="pt-2 border-t border-slate-800 space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-[11px] text-slate-300 font-bold">Jual Saham:</span>
+              <span id="stock-sell-preview" class="text-[11px] font-bold text-rose-400">Estimasi: Rp 0</span>
+            </div>
+            <div class="flex gap-2">
+              <input type="number" id="stock-sell-input" min="1" placeholder="Jumlah lembar jual..." oninput="game.onStockSellInputChange(this.value)" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-rose-500">
+              <button onclick="game.sellStockCustom()" class="btn-press px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs">Jual</button>
+            </div>
+            <div class="grid grid-cols-4 gap-1.5">
+              <button onclick="game.setStockSellInput(10)" class="btn-press py-1.5 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold">10</button>
+              <button onclick="game.setStockSellInput(100)" class="btn-press py-1.5 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold">100</button>
+              <button onclick="game.setStockSellInput(1000)" class="btn-press py-1.5 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold">1.000</button>
+              <button onclick="game.setStockSellInput('all')" class="btn-press py-1.5 rounded-lg bg-rose-500 text-white text-xs font-bold">Semua</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: TRADING KRIPTO (DENGAN INPUT KOIN & ESTIMASI) -->
+    <div id="crypto-modal" class="modal-backdrop hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="modal-card bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-sm p-4 shadow-2xl relative">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <h3 id="crypto-modal-title" class="font-bold text-white text-sm">Trading Kripto</h3>
+          <button onclick="game.closeCryptoModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+        </div>
+
+        <div class="py-3 space-y-2.5 text-xs">
+          <div class="flex justify-between">
+            <span class="text-slate-400">Harga Terkini:</span>
+            <span id="crypto-modal-price" class="font-bold text-white">Rp 0</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Saldo Dompet:</span>
+            <span id="crypto-modal-owned" class="font-bold text-purple-400">0.0000</span>
+          </div>
+
+          <!-- Informasi Daya Beli Kas -->
+          <div class="flex justify-between items-center bg-slate-950 p-2 rounded-xl border border-slate-800">
+            <span class="text-slate-400 text-[11px]">Maksimal Dapat Dibeli:</span>
+            <span id="crypto-modal-max-buy" class="font-bold text-purple-400 text-[11px]">0.0000 COIN</span>
+          </div>
+
+          <!-- Section Beli Kripto dengan Input -->
+          <div class="pt-2 border-t border-slate-800 space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-[11px] text-slate-300 font-bold">Beli Kripto (Input Koin):</span>
+              <span id="crypto-buy-preview" class="text-[11px] font-bold text-purple-400">Estimasi: Rp 0</span>
+            </div>
+            <div class="flex gap-2">
+              <input type="number" id="crypto-buy-input" step="any" min="0" placeholder="Jumlah koin..." oninput="game.onCryptoBuyInputChange(this.value)" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-purple-500">
+              <button onclick="game.buyCryptoCustom()" class="btn-press px-4 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs">Beli</button>
+            </div>
+            <div class="grid grid-cols-4 gap-1.5">
+              <button onclick="game.setCryptoBuyPercent(25)" class="btn-press py-1.5 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-semibold">25% Kas</button>
+              <button onclick="game.setCryptoBuyPercent(50)" class="btn-press py-1.5 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-semibold">50% Kas</button>
+              <button onclick="game.setCryptoBuyPercent(75)" class="btn-press py-1.5 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-semibold">75% Kas</button>
+              <button onclick="game.setCryptoBuyPercent(100)" class="btn-press py-1.5 rounded-lg bg-purple-600 text-white text-xs font-black">100% Kas</button>
+            </div>
+          </div>
+
+          <!-- Section Jual Koin Kripto -->
+          <div class="pt-2 border-t border-slate-800 space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-[11px] text-slate-300 font-bold">Jual Kripto:</span>
+              <span id="crypto-sell-preview" class="text-[11px] font-bold text-rose-400">Estimasi: Rp 0</span>
+            </div>
+            <div class="flex gap-2">
+              <input type="number" id="crypto-sell-input" step="any" min="0" placeholder="Jumlah koin jual..." oninput="game.onCryptoSellInputChange(this.value)" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-rose-500">
+              <button onclick="game.sellCryptoCustom()" class="btn-press px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs">Jual</button>
+            </div>
+            <div class="grid grid-cols-4 gap-1.5">
+              <button onclick="game.setCryptoSellPercent(25)" class="btn-press py-1.5 rounded-lg bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold">25%</button>
+              <button onclick="game.setCryptoSellPercent(50)" class="btn-press py-1.5 rounded-lg bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold">50%</button>
+              <button onclick="game.setCryptoSellPercent(75)" class="btn-press py-1.5 rounded-lg bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold">75%</button>
+              <button onclick="game.setCryptoSellPercent(100)" class="btn-press py-1.5 rounded-lg bg-rose-500 text-white text-xs font-black">Semua</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: ORDER KONTRAK TRADING KOMODITAS (LONG / SHORT) -->
+    <div id="commodity-modal" class="modal-backdrop hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="modal-card bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-sm p-4 shadow-2xl relative">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <h3 id="commodity-modal-title" class="font-bold text-white text-sm">Kontrak Komoditas</h3>
+          <button onclick="game.closeCommodityModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+        </div>
+
+        <div class="py-3 space-y-3 text-xs">
+          <div class="flex justify-between items-center bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+            <span class="text-slate-400">Harga Terkini Pasar:</span>
+            <span id="commodity-modal-price" class="font-bold text-white">Rp 0</span>
+          </div>
+
+          <!-- Arah Posisi: LONG vs SHORT -->
+          <div>
+            <label class="text-[11px] text-slate-400 font-bold block mb-1.5">Pilih Arah Posisi Pasar:</label>
+            <div class="flex gap-2">
+              <button id="commodity-btn-type-long" onclick="game.setCommodityOrderType('LONG')" class="flex-1 py-2 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs shadow-md shadow-emerald-500/20 transition">
+                🟢 LONG (Prediksi Naik)
+              </button>
+              <button id="commodity-btn-type-short" onclick="game.setCommodityOrderType('SHORT')" class="flex-1 py-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white font-bold text-xs transition">
+                🔴 SHORT (Prediksi Turun)
+              </button>
+            </div>
+          </div>
+
+          <!-- Leverage Selector -->
+          <div>
+            <div class="flex justify-between items-center mb-1.5">
+              <label class="text-[11px] text-slate-400 font-bold">Pilih Pengali Leverage:</label>
+              <span class="text-[10px] text-amber-400">Makin tinggi, potensi cuan/risiko berlipat</span>
+            </div>
+            <div class="grid grid-cols-5 gap-1.5">
+              <button id="commodity-lev-btn-1" onclick="game.setCommodityOrderLeverage(1)" class="btn-press py-1.5 rounded-lg bg-slate-800 text-slate-400 text-xs font-bold">1x</button>
+              <button id="commodity-lev-btn-2" onclick="game.setCommodityOrderLeverage(2)" class="btn-press py-1.5 rounded-lg bg-slate-800 text-slate-400 text-xs font-bold">2x</button>
+              <button id="commodity-lev-btn-5" onclick="game.setCommodityOrderLeverage(5)" class="btn-press py-1.5 rounded-lg bg-amber-400 text-slate-950 text-xs font-black shadow">5x</button>
+              <button id="commodity-lev-btn-10" onclick="game.setCommodityOrderLeverage(10)" class="btn-press py-1.5 rounded-lg bg-slate-800 text-slate-400 text-xs font-bold">10x</button>
+              <button id="commodity-lev-btn-20" onclick="game.setCommodityOrderLeverage(20)" class="btn-press py-1.5 rounded-lg bg-slate-800 text-slate-400 text-xs font-bold">20x</button>
+            </div>
+          </div>
+
+          <!-- Modal Jaminan / Margin Input -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between items-center">
+              <label class="text-[11px] text-slate-300 font-bold">Modal Jaminan (Margin Kas):</label>
+              <span class="text-[10px] text-slate-400">Kas Tersedia: <span id="commodity-max-margin-text" class="text-white font-bold">Rp 0</span></span>
+            </div>
+            <input type="number" id="commodity-margin-input" min="1000000" step="1000000" placeholder="Contoh: 10000000" oninput="game.onCommodityMarginInputChange(this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-amber-400">
+            
+            <div class="grid grid-cols-4 gap-1.5">
+              <button onclick="game.setCommodityMarginQuick(10000000)" class="btn-press py-1 rounded-lg bg-slate-800 text-slate-300 text-[11px] font-semibold">10 Jt</button>
+              <button onclick="game.setCommodityMarginQuick(50000000)" class="btn-press py-1 rounded-lg bg-slate-800 text-slate-300 text-[11px] font-semibold">50 Jt</button>
+              <button onclick="game.setCommodityMarginQuick(100000000)" class="btn-press py-1 rounded-lg bg-slate-800 text-slate-300 text-[11px] font-semibold">100 Jt</button>
+              <button onclick="game.setCommodityMarginQuick('max')" class="btn-press py-1 rounded-lg bg-slate-800 text-amber-400 text-[11px] font-bold">Semua Kas</button>
+            </div>
+          </div>
+
+          <!-- Kalkulasi Ringkasan Kontrak -->
+          <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 space-y-1.5 text-[11px]">
+            <div class="flex justify-between items-center">
+              <span class="text-slate-400">Total Nilai Kontrak Terbuka:</span>
+              <span id="commodity-preview-position-value" class="font-extrabold text-white">Rp 0</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-slate-400">Estimasi Titik Likuidasi:</span>
+              <span id="commodity-preview-liq-price" class="font-mono font-bold text-amber-400">Rp 0</span>
+            </div>
+          </div>
+
+          <button id="commodity-submit-order-btn" onclick="game.confirmOpenCommodityPosition()" class="btn-press w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/25 mt-1">
+            Buka Posisi Kontrak LONG (Beli)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: OFFLINE EARNINGS POPUP -->
+    <div id="offline-modal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+      <div class="modal-card bg-gradient-to-b from-slate-900 to-slate-950 border border-emerald-500/50 rounded-3xl w-full max-w-sm p-6 shadow-2xl text-center space-y-4">
+        <div class="w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 mx-auto flex items-center justify-center text-3xl">
+          💰
+        </div>
+        <div>
+          <h3 class="text-lg font-black text-white">Selamat Datang Kembali!</h3>
+          <p class="text-xs text-slate-400 mt-1">Kerajaan bisnis Anda terus menghasilkan keuntungan saat Anda sedang offline.</p>
+        </div>
+        <div class="p-4 rounded-2xl bg-slate-800/80 border border-slate-700">
+          <div class="text-xs text-slate-400">Waktu Ditinggalkan: <span id="offline-hours-text" class="font-bold text-white">0 Jam</span></div>
+          <div id="offline-earned-text" class="text-2xl font-black text-emerald-400 mt-1 glow-green">+Rp 0</div>
+        </div>
+        <button onclick="game.closeOfflineModal()" class="w-full py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm shadow-lg shadow-emerald-500/30 btn-press">
+          Klaim Keuntungan!
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Game Scripts (Modular Architecture) -->
+  <script src="js/sound.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/modules/core.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/modules/calculations.js"></script>
+  <script src="js/modules/tax.js"></script>
+  <script src="js/modules/business.js"></script>
+  <script src="js/modules/invest.js"></script>
+  <script src="js/modules/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

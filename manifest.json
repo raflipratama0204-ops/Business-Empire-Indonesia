@@ -1,0 +1,24 @@
+{
+  "name": "Business Empire: RichMan (Indonesia Edition)",
+  "short_name": "Business Empire",
+  "description": "Game Simulasi Bisnis, Saham, Kripto, dan Real Estate Indonesia",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "icons": [
+    {
+      "src": "images/app_logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
+
