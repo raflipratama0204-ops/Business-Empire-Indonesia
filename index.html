@@ -199,19 +199,33 @@
       <!-- TAB 2: INVESTASI (Saham, Kripto, & Properti) -->
       <section id="tab-invest" class="tab-content-panel hidden">
         <!-- Sub-tabs for Investments -->
-        <div class="flex items-center justify-between mb-3 bg-slate-950 p-1 rounded-xl border border-slate-800">
-          <button id="invest-sub-btn-stocks" onclick="game.switchInvestSubTab('stocks')" class="flex-1 py-1.5 rounded-lg bg-slate-800 text-white font-bold text-xs shadow transition">
+        <div class="flex items-center justify-between gap-1 mb-2.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <button id="invest-sub-btn-stocks" onclick="game.switchInvestSubTab('stocks')" class="flex-1 py-1.5 px-1 rounded-lg bg-slate-800 text-white font-bold text-[11px] sm:text-xs shadow transition text-center truncate">
             📈 Saham
           </button>
-          <button id="invest-sub-btn-crypto" onclick="game.switchInvestSubTab('crypto')" class="flex-1 py-1.5 rounded-lg text-slate-400 hover:text-white font-semibold text-xs transition">
+          <button id="invest-sub-btn-crypto" onclick="game.switchInvestSubTab('crypto')" class="flex-1 py-1.5 px-1 rounded-lg text-slate-400 hover:text-white font-semibold text-[11px] sm:text-xs transition text-center truncate">
             🪙 Kripto
           </button>
-          <button id="invest-sub-btn-commodity" onclick="game.switchInvestSubTab('commodity')" class="flex-1 py-1.5 rounded-lg text-slate-400 hover:text-white font-semibold text-xs transition">
+          <button id="invest-sub-btn-commodity" onclick="game.switchInvestSubTab('commodity')" class="flex-1 py-1.5 px-1 rounded-lg text-slate-400 hover:text-white font-semibold text-[11px] sm:text-xs transition text-center truncate">
             🛢️ Komoditas
           </button>
-          <button id="invest-sub-btn-property" onclick="game.switchInvestSubTab('property')" class="flex-1 py-1.5 rounded-lg text-slate-400 hover:text-white font-semibold text-xs transition">
+          <button id="invest-sub-btn-property" onclick="game.switchInvestSubTab('property')" class="flex-1 py-1.5 px-1 rounded-lg text-slate-400 hover:text-white font-semibold text-[11px] sm:text-xs transition text-center truncate">
             🏠 Properti
           </button>
+        </div>
+
+        <!-- Live Real-Time Market Status Banner (Otomatis Ubah Harga Setiap 1 Menit) -->
+        <div id="market-live-ticker-banner" class="flex items-center justify-between px-3 py-1.5 rounded-xl bg-slate-950/90 border border-slate-800 text-xs mb-3 shadow-sm">
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span class="text-[11px] font-bold text-slate-300 truncate">Pasar Investasi Live</span>
+          </div>
+          <div id="market-refresh-countdown" class="text-[11px] font-mono font-bold text-emerald-400 shrink-0">
+            ⏱️ Update: 60s
+          </div>
         </div>
 
         <!-- 1. Bursa Saham -->
@@ -254,6 +268,11 @@
               <!-- Populated by JavaScript -->
             </div>
           </div>
+
+          <!-- View 3: Detail Saham (Authentic RichMan Screen) -->
+          <div id="stocks-view-detail" class="hidden view-transition">
+            <!-- Populated by JavaScript renderStockDetail() -->
+          </div>
         </div>
 
         <!-- 2. Aset Kripto -->
@@ -292,6 +311,11 @@
             <div id="crypto-list-container">
               <!-- Populated by JavaScript -->
             </div>
+          </div>
+
+          <!-- View 3: Detail Kripto (Authentic RichMan Screen) -->
+          <div id="crypto-view-detail" class="hidden view-transition">
+            <!-- Populated by JavaScript renderCryptoDetail() -->
           </div>
         </div>
 
@@ -343,42 +367,16 @@
         </div>
       </section>
 
-      <!-- TAB 3: KEMEWAHAN (Lifestyle, Motor, Mobil, Mansion & Koleksi) -->
-      <section id="tab-luxury" class="tab-content-panel hidden">
-        <!-- View 1: Koleksi Kemewahan Saya (Default / Portofolio Kemewahan) -->
-        <div id="luxury-view-owned" class="view-transition">
-          <div class="flex items-center justify-between mb-3">
-            <div>
-              <h2 class="text-xs uppercase tracking-wider font-extrabold text-slate-400">Koleksi Kemewahan Saya</h2>
-              <span id="luxury-owned-count" class="text-[11px] text-amber-400 font-semibold">0 Aset Dimiliki</span>
-            </div>
-            <button onclick="game.setLuxuryView('catalog')" class="btn-press px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-md shadow-amber-400/20 flex items-center gap-1.5">
-              <span>+ Beli Aset Baru</span>
-            </button>
-          </div>
-
-          <!-- Ringkasan Nilai & Prestise Koleksi -->
-          <div id="luxury-summary-card" class="glass-panel p-3.5 rounded-2xl border border-slate-800 mb-3 space-y-2">
-            <!-- Populated by JavaScript -->
-          </div>
-
-          <div id="luxury-owned-container">
-            <!-- Populated by JavaScript -->
-          </div>
+      <!-- TAB 3: KEMEWAHAN / ITEMS (Garage, Hangar, Harbor, Showrooms, Residence & Collections) -->
+      <section id="tab-luxury" class="tab-content-panel hidden space-y-4">
+        <!-- Main Dashboard View: Matching Business Empire: RichMan Items screen -->
+        <div id="luxury-view-dashboard" class="view-transition space-y-4">
+          <!-- Populated by JavaScript renderLuxuryDashboard() -->
         </div>
 
-        <!-- View 2: Katalog & Showroom Pembelian Kemewahan -->
-        <div id="luxury-view-catalog" class="hidden view-transition">
-          <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
-            <button onclick="game.setLuxuryView('owned')" class="btn-press px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center gap-1">
-              <span>← Kembali ke Koleksi Saya</span>
-            </button>
-            <h2 class="text-xs uppercase tracking-wider font-extrabold text-slate-400">Showroom Kemewahan</h2>
-          </div>
-
-          <div id="luxury-catalog-container">
-            <!-- Populated by JavaScript -->
-          </div>
+        <!-- Sub-View: Facilities / Showrooms / Residence Manager / Collection Gallery -->
+        <div id="luxury-view-sub" class="hidden view-transition space-y-4">
+          <!-- Populated by JavaScript renderLuxurySubView() -->
         </div>
       </section>
 
@@ -429,10 +427,10 @@
         <span id="nav-home-text" class="text-[10px] font-black mt-1 text-emerald-400 tracking-tight transition">Beranda</span>
       </button>
 
-      <!-- 4. Kemewahan -->
+      <!-- 4. Items (Kemewahan) -->
       <button data-tab="luxury" class="nav-tab-btn flex flex-col items-center justify-center flex-1 py-1 text-slate-400 border-t-2 border-transparent transition">
-        <span class="text-xl">🏎️</span>
-        <span class="text-[10px] font-bold mt-0.5">Kemewahan</span>
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+        <span class="text-[10px] font-bold mt-0.5">Items</span>
       </button>
 
       <!-- 5. Profil -->
