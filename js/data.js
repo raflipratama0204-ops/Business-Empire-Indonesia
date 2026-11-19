@@ -33,7 +33,7 @@ const BUSINESS_SECTORS = [
     sectorId: 'retail',
     name: 'Toko & Supermarket',
     icon: '🏪',
-    image: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=500&auto=format&fit=crop&q=80',
+    image: 'images/sector_retail.jpg',
     desc: 'Buka toko ritel kebutuhan masyarakat. Pilih skala toko: Kecil, Sedang, atau Besar.',
     hasSubtypes: true,
     subtypes: [
@@ -67,7 +67,7 @@ const BUSINESS_SECTORS = [
     sectorId: 'taxi',
     name: 'Armada Taksi & Ojol',
     icon: '🚕',
-    image: '/images/veh_avanza.jpg',
+    image: 'images/veh_avanza.jpg',
     desc: 'Layanan transportasi penumpang. Anda membeli unit armada sendiri, merawat masa pakai jarak tempuh (KM), dan memperluas kapasitas lahan parkir.',
     baseCost: 75000000, // Rp 75 Juta (termasuk izin trayek & fasilitas parkir awal)
     isFleet: true
@@ -76,7 +76,7 @@ const BUSINESS_SECTORS = [
     sectorId: 'cafe',
     name: 'Kafe & Restoran Kekinian',
     icon: '☕',
-    image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=500&auto=format&fit=crop&q=80',
+    image: 'images/sector_cafe.jpg',
     desc: 'Tempat nongkrong favorit anak muda dengan menu kopi spesial dan makanan lezat.',
     baseCost: 220000000, // Rp 220 Juta
     baseRevenue: 5800000 // Rp 5,8 Juta / jam
@@ -85,7 +85,7 @@ const BUSINESS_SECTORS = [
     sectorId: 'fashion',
     name: 'Brand Fashion & Pakaian',
     icon: '👕',
-    image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=500&auto=format&fit=crop&q=80',
+    image: 'images/sector_fashion.jpg',
     desc: 'Industri pakaian & garmen. Pilih membuka Brand Distro Biasa atau Luxury Brand Haute-Couture.',
     hasSubtypes: true,
     subtypes: [
@@ -111,7 +111,7 @@ const BUSINESS_SECTORS = [
     sectorId: 'logistics',
     name: 'Ekspedisi & Pergudangan Logistik',
     icon: '🚚',
-    image: '/images/trk_canter.jpg',
+    image: 'images/trk_canter.jpg',
     desc: 'Bisnis kargo lengkap: beli armada truk kontainer sendiri, kelola jarak tempuh (KM), dan perluas hub gudang untuk bermitra dengan perusahaan penyewa.',
     baseCost: 1600000000, // Rp 1,6 Miliar
     isLogistics: true
@@ -120,7 +120,7 @@ const BUSINESS_SECTORS = [
     sectorId: 'bank',
     name: 'Bank Komersial Swasta',
     icon: '🏦',
-    image: 'https://images.unsplash.com/photo-1501167786227-4cba60f6d58f?w=500&auto=format&fit=crop&q=80',
+    image: 'images/sector_bank.jpg',
     desc: 'Lembaga keuangan perbankan. Anda mengatur suku bunga simpanan & pinjaman untuk meraup cuan bunga masif!',
     baseCost: 8000000000, // Rp 8 Miliar
     isBank: true,
@@ -133,7 +133,7 @@ const BUSINESS_SECTORS = [
     sectorId: 'tech',
     name: 'Studio Game & Software House',
     icon: '💻',
-    image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=500&auto=format&fit=crop&q=80',
+    image: 'images/sector_tech.jpg',
     desc: 'Perusahaan teknologi & software house. Rekrut tim programmer, pimpin proyek IT bergengsi, dan raih honor kontrak bernilai miliaran rupiah.',
     baseCost: 28000000000, // Rp 28 Miliar
     isTech: true
@@ -142,7 +142,7 @@ const BUSINESS_SECTORS = [
     sectorId: 'airline',
     name: 'Maskapai Penerbangan Komersial',
     icon: '✈️',
-    image: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=500&auto=format&fit=crop&q=80',
+    image: 'images/sector_airline.jpg',
     desc: 'Beli armada jet, boeing, wide-body, hingga superjumbo double-deck. Buka izin slot rute penerbangan ke berbagai bandara negara di dunia dan jaga kelaikan terbang armada Anda.',
     baseCost: 65000000000, // Rp 65 Miliar
     isAirline: true
@@ -151,7 +151,7 @@ const BUSINESS_SECTORS = [
     sectorId: 'oil',
     name: 'Perusahaan Minyak & Gas Bumi',
     icon: '🛢️',
-    image: '/images/sector_oil.jpg',
+    image: 'images/sector_oil.jpg',
     desc: 'Eksplorasi sumur minyak lepas pantai, anjungan gas, dan kilang LNG. Bangun fasilitas produksi untuk memenuhi kuota barel migas dan tandatangani kontrak suplai bernilai triliunan rupiah.',
     baseCost: 120000000000, // Rp 120 Miliar
     baseRevenue: 1200000000, // Rp 1,2 Miliar / jam starter
@@ -161,7 +161,7 @@ const BUSINESS_SECTORS = [
     sectorId: 'mining',
     name: 'Korporasi Tambang Nikel & Emas',
     icon: '⛏️',
-    image: '/images/sector_mining.jpg',
+    image: 'images/sector_mining.jpg',
     desc: 'Operasi alat berat tambang raksasa, konsesi nikel baterai EV, dan smelter emas. Tingkatkan kapasitas tonase untuk mengamankan kontrak pasokan raksasa industri dunia.',
     baseCost: 260000000000, // Rp 260 Miliar
     baseRevenue: 2500000000, // Rp 2,5 Miliar / jam starter
@@ -171,7 +171,7 @@ const BUSINESS_SECTORS = [
     sectorId: 'space',
     name: 'Agensi Antariksa & Dirgantara',
     icon: '🚀',
-    image: 'https://images.unsplash.com/photo-1517976487507-5b3b4a450537?w=500&auto=format&fit=crop&q=80',
+    image: 'images/sector_space.jpg',
     desc: 'Peluncuran satelit komersial orbit rendah, eksplorasi bulan, dan armada pesawat luar angkasa.',
     baseCost: 1500000000000, // Rp 1,5 Triliun
     baseRevenue: 42000000000 // Rp 42 Miliar / jam
@@ -246,7 +246,7 @@ const TAXI_FLEET_VEHICLES = [
     revenue: 580000, // Rp 580.000 / jam
     maxKm: 180000,
     icon: '🚕',
-    image: '/images/veh_vios.jpg',
+    image: 'images/veh_vios.jpg',
     desc: 'Sedan taksi andalan hemat BBM, armada utama perkotaan dengan tarif terjangkau.'
   },
   {
@@ -257,7 +257,7 @@ const TAXI_FLEET_VEHICLES = [
     revenue: 720000, // Rp 720.000 / jam
     maxKm: 210000,
     icon: '🚐',
-    image: '/images/veh_avanza.jpg',
+    image: 'images/veh_avanza.jpg',
     desc: 'Mobil 7-seater luas andalan keluarga, pesanan taksi harian tak pernah sepi.'
   },
   {
@@ -268,7 +268,7 @@ const TAXI_FLEET_VEHICLES = [
     revenue: 1600000, // Rp 1,6 Juta / jam
     maxKm: 260000,
     icon: '🚘',
-    image: '/images/veh_innova.jpg',
+    image: 'images/veh_innova.jpg',
     desc: 'Kabin super senyap dan suspensi empuk, tarif sewa eksekutif perkantoran.'
   },
   {
@@ -279,7 +279,7 @@ const TAXI_FLEET_VEHICLES = [
     revenue: 3100000, // Rp 3,1 Juta / jam
     maxKm: 300000,
     icon: '✨',
-    image: '/images/veh_camry.jpg',
+    image: 'images/veh_camry.jpg',
     desc: 'Layanan VIP antar-jemput eksekutif hotel bintang 5 dan bandara internasional.'
   },
   {
@@ -290,7 +290,7 @@ const TAXI_FLEET_VEHICLES = [
     revenue: 3800000, // Rp 3,8 Juta / jam
     maxKm: 320000,
     icon: '⚡',
-    image: '/images/veh_ioniq5.jpg',
+    image: 'images/veh_ioniq5.jpg',
     desc: 'Armada mobil listrik ramah lingkungan berteknologi tinggi dengan tarif premium.'
   },
   {
@@ -301,7 +301,7 @@ const TAXI_FLEET_VEHICLES = [
     revenue: 7500000, // Rp 7,5 Juta / jam
     maxKm: 360000,
     icon: '👑',
-    image: '/images/veh_alphard.jpg',
+    image: 'images/veh_alphard.jpg',
     desc: 'Kenyamanan tertinggi untuk pejabat, selebriti, dan pengusaha papan atas.'
   },
   {
@@ -312,7 +312,7 @@ const TAXI_FLEET_VEHICLES = [
     revenue: 110000, // Rp 110.000 / jam
     maxKm: 90000,
     icon: '🛵',
-    image: '/images/veh_beat.jpg',
+    image: 'images/veh_beat.jpg',
     desc: 'Motor matic gesit selap-selip kemacetan kota untuk antar penumpang dan paket kilat.'
   },
   {
@@ -323,7 +323,7 @@ const TAXI_FLEET_VEHICLES = [
     revenue: 230000, // Rp 230.000 / jam
     maxKm: 120000,
     icon: '🏍️',
-    image: '/images/veh_nmax.jpg',
+    image: 'images/veh_nmax.jpg',
     desc: 'Motor matic berbadan besar untuk perjalanan penumpang jarak jauh yang nyaman.'
   }
 ];
@@ -338,7 +338,7 @@ const LOGISTICS_FLEET_VEHICLES = [
     revenue: 780000, // Rp 780.000 / jam
     maxKm: 180000,
     icon: '🚐',
-    image: '/images/trk_granmax.jpg',
+    image: 'images/trk_granmax.jpg',
     desc: 'Kendaraan boks tertutup lincah dalam kota untuk mengantar ribuan paket belanja online.'
   },
   {
@@ -349,7 +349,7 @@ const LOGISTICS_FLEET_VEHICLES = [
     revenue: 1150000, // Rp 1,15 Juta / jam
     maxKm: 220000,
     icon: '🛻',
-    image: '/images/trk_pickup.jpg',
+    image: 'images/trk_pickup.jpg',
     desc: 'Legenda angkutan niaga tangguh di segala medan untuk distribusi komoditas.'
   },
   {
@@ -360,7 +360,7 @@ const LOGISTICS_FLEET_VEHICLES = [
     revenue: 2650000, // Rp 2,65 Juta / jam
     maxKm: 280000,
     icon: '🚚',
-    image: '/images/trk_engkel.jpg',
+    image: 'images/trk_engkel.jpg',
     desc: 'Truk boks 4-roda serbaguna dengan kapasitas angkut hingga 5 ton bebas masuk jalan kota.'
   },
   {
@@ -371,7 +371,7 @@ const LOGISTICS_FLEET_VEHICLES = [
     revenue: 4500000, // Rp 4,5 Juta / jam
     maxKm: 340000,
     icon: '🚛',
-    image: '/images/trk_canter.jpg',
+    image: 'images/trk_canter.jpg',
     desc: 'Truk diesel bertenaga besar untuk jalur tol trans-Jawa dan antar pulau.'
   },
   {
@@ -382,7 +382,7 @@ const LOGISTICS_FLEET_VEHICLES = [
     revenue: 9800000, // Rp 9,8 Juta / jam
     maxKm: 420000,
     icon: '🏗️',
-    image: '/images/trk_fuso_wing.jpg',
+    image: 'images/trk_fuso_wing.jpg',
     desc: 'Truk raksasa bersayap hidrolik untuk bongkar muat cepat barang industri seberat 20 ton.'
   },
   {
@@ -393,7 +393,7 @@ const LOGISTICS_FLEET_VEHICLES = [
     revenue: 22000000, // Rp 22 Juta / jam
     maxKm: 520000,
     icon: '🚢',
-    image: '/images/trk_trailer.jpg',
+    image: 'images/trk_trailer.jpg',
     desc: 'Pengangkut kontainer peti kemas pelabuhan internasional dengan hasil sewa fantastis.'
   }
 ];
@@ -807,7 +807,7 @@ const AIRLINE_AIRCRAFT_CATALOG = [
     rangeKm: 4815,
     maintenanceCost: 110000000, // Rp 110 Juta / jam
     icon: '🛩️',
-    image: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=500&auto=format&fit=crop&q=80',
+    image: 'images/plane_embraer.jpg',
     desc: 'Pesawat jet modern aerodinamis hemat bahan bakar untuk rute komuter cepat antarnegara tetangga.'
   },
   {
@@ -820,7 +820,7 @@ const AIRLINE_AIRCRAFT_CATALOG = [
     rangeKm: 5100,
     maintenanceCost: 135000000, // Rp 135 Juta / jam
     icon: '🛩️',
-    image: 'https://images.unsplash.com/photo-1520437358207-323b43b50729?w=500&auto=format&fit=crop&q=80',
+    image: 'images/plane_crj.jpg',
     desc: 'Jet regional kabin sunyi dengan keandalan operasional tinggi dan efisiensi perawatan mesin turbofan.'
   },
 
@@ -835,7 +835,7 @@ const AIRLINE_AIRCRAFT_CATALOG = [
     rangeKm: 6570,
     maintenanceCost: 320000000, // Rp 320 Juta / jam
     icon: '✈️',
-    image: 'https://images.unsplash.com/photo-1569154941061-e231b4725ef1?w=500&auto=format&fit=crop&q=80',
+    image: 'images/plane_b737.jpg',
     desc: 'Pesawat lorong tunggal paling laris di dunia, tulang punggung penerbangan komersial antarnegara kawasan.'
   },
   {
@@ -848,7 +848,7 @@ const AIRLINE_AIRCRAFT_CATALOG = [
     rangeKm: 8700,
     maintenanceCost: 390000000, // Rp 390 Juta / jam
     icon: '✈️',
-    image: 'https://images.unsplash.com/photo-1583073030825-78809ff44ff6?w=500&auto=format&fit=crop&q=80',
+    image: 'images/plane_a321.jpg',
     desc: 'Pesawat berteknologi kabin Airspace dengan jangkauan ekstra jauh melintasi berbagai negara di Asia.'
   },
 
@@ -863,7 +863,7 @@ const AIRLINE_AIRCRAFT_CATALOG = [
     rangeKm: 14140,
     maintenanceCost: 780000000, // Rp 780 Juta / jam
     icon: '🛫',
-    image: 'https://images.unsplash.com/photo-1542296332-2e4473faf563?w=500&auto=format&fit=crop&q=80',
+    image: 'images/plane_b787.jpg',
     desc: 'Pesawat badan lebar berkonstruksi serat karbon komposit modern dengan jendela elektrokromik mewah.'
   },
   {
@@ -876,7 +876,7 @@ const AIRLINE_AIRCRAFT_CATALOG = [
     rangeKm: 15000,
     maintenanceCost: 920000000, // Rp 920 Juta / jam
     icon: '🛫',
-    image: 'https://images.unsplash.com/photo-1520690214124-2405c5217036?w=500&auto=format&fit=crop&q=80',
+    image: 'images/plane_a350.jpg',
     desc: 'Pesawat flagship antarbenua berdaya jelajah tinggi dengan kapasitas angkut kargo dan penumpang superior.'
   },
 
@@ -891,7 +891,7 @@ const AIRLINE_AIRCRAFT_CATALOG = [
     rangeKm: 14815,
     maintenanceCost: 1650000000, // Rp 1,65 Miliar / jam
     icon: '🛬',
-    image: 'https://images.unsplash.com/photo-1559297434-fae8a1916a79?w=500&auto=format&fit=crop&q=80',
+    image: 'images/plane_b747.jpg',
     desc: 'Sang "Queen of the Skies" bertingkat dua legendaris dengan punuk ikonik dan daya angkut kargo masif.'
   },
   {
@@ -904,7 +904,7 @@ const AIRLINE_AIRCRAFT_CATALOG = [
     rangeKm: 15200,
     maintenanceCost: 1950000000, // Rp 1,95 Miliar / jam
     icon: '🛬',
-    image: 'https://images.unsplash.com/photo-1512353087810-25dfcd100962?w=500&auto=format&fit=crop&q=80',
+    image: 'images/plane_a380.jpg',
     desc: 'Pesawat penumpang komersial terbesar di dunia bertingkat penuh (full double-deck) dengan fasilitas suite bintang lima.'
   }
 ];
@@ -1506,7 +1506,8 @@ const CRYPTO_CATALOG = [
     basePrice: 1480000000,
     volatility: 0.075,
     icon: '₿',
-    color: '#f59e0b'
+    color: '#f59e0b',
+    logo: 'images/crypto_bitcoin.svg'
   },
   {
     symbol: 'ETH',
@@ -1514,7 +1515,8 @@ const CRYPTO_CATALOG = [
     basePrice: 52000000,
     volatility: 0.09,
     icon: 'Ξ',
-    color: '#6366f1'
+    color: '#6366f1',
+    logo: 'images/crypto_bitcoin.svg'
   },
   {
     symbol: 'SOL',
@@ -1522,7 +1524,8 @@ const CRYPTO_CATALOG = [
     basePrice: 3100000,
     volatility: 0.12,
     icon: '◎',
-    color: '#a855f7'
+    color: '#a855f7',
+    logo: 'images/crypto_bitcoin.svg'
   },
   {
     symbol: 'DOGE',
@@ -1530,7 +1533,8 @@ const CRYPTO_CATALOG = [
     basePrice: 3450,
     volatility: 0.18,
     icon: '🐕',
-    color: '#eab308'
+    color: '#eab308',
+    logo: 'images/crypto_bitcoin.svg'
   }
 ];
 
@@ -1705,7 +1709,7 @@ const LUXURY_CATALOG = [
     price: 18500000,
     icon: '🛵',
     prestige: 25,
-    image: '/images/veh_beat.jpg'
+    image: 'images/veh_beat.jpg'
   },
   {
     id: 'moto_scoopy',
@@ -1715,7 +1719,7 @@ const LUXURY_CATALOG = [
     price: 23500000,
     icon: '🛵',
     prestige: 35,
-    image: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=500&auto=format&fit=crop&q=80'
+    image: 'images/moto_scoopy.jpg'
   },
   {
     id: 'moto_vario',
@@ -1725,7 +1729,7 @@ const LUXURY_CATALOG = [
     price: 29500000,
     icon: '🛵',
     prestige: 45,
-    image: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=500&auto=format&fit=crop&q=80'
+    image: 'images/moto_vario.jpg'
   },
   {
     id: 'moto_aerox',
@@ -1735,7 +1739,7 @@ const LUXURY_CATALOG = [
     price: 31500000,
     icon: '🛵',
     prestige: 50,
-    image: 'https://images.unsplash.com/photo-1558981408-db0ecd8a1ee4?w=500&auto=format&fit=crop&q=80'
+    image: 'images/moto_aerox.jpg'
   },
   {
     id: 'moto_nmax',
@@ -1745,7 +1749,7 @@ const LUXURY_CATALOG = [
     price: 36000000,
     icon: '🛵',
     prestige: 60,
-    image: '/images/veh_nmax.jpg'
+    image: 'images/veh_nmax.jpg'
   },
   {
     id: 'moto_pcx',
@@ -1755,7 +1759,7 @@ const LUXURY_CATALOG = [
     price: 37500000,
     icon: '🛵',
     prestige: 65,
-    image: 'https://images.unsplash.com/photo-1558980664-3a031cf67ea8?w=500&auto=format&fit=crop&q=80'
+    image: 'images/moto_pcx.jpg'
   },
   {
     id: 'moto_vespa_lx',
@@ -1765,7 +1769,7 @@ const LUXURY_CATALOG = [
     price: 45000000,
     icon: '🛵',
     prestige: 80,
-    image: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=500&auto=format&fit=crop&q=80'
+    image: 'images/moto_vespa.jpg'
   },
   {
     id: 'moto_vespa',
@@ -1775,7 +1779,7 @@ const LUXURY_CATALOG = [
     price: 54000000,
     icon: '🛵',
     prestige: 100,
-    image: '/images/moto_vespa.jpg'
+    image: 'images/moto_vespa.jpg'
   },
   {
     id: 'moto_vespa_sprint',
@@ -1785,7 +1789,7 @@ const LUXURY_CATALOG = [
     price: 63000000,
     icon: '🛵',
     prestige: 120,
-    image: 'https://images.unsplash.com/photo-1558980394-4c7c9299fe96?w=500&auto=format&fit=crop&q=80'
+    image: 'images/moto_vespa.jpg'
   },
   {
     id: 'moto_klx',
@@ -1795,7 +1799,7 @@ const LUXURY_CATALOG = [
     price: 73000000,
     icon: '🏍️',
     prestige: 140,
-    image: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=500&auto=format&fit=crop&q=80'
+    image: 'images/moto_klx.jpg'
   },
   {
     id: 'moto_cbr250',
@@ -1805,7 +1809,7 @@ const LUXURY_CATALOG = [
     price: 81000000,
     icon: '🏍️',
     prestige: 160,
-    image: 'https://images.unsplash.com/photo-1558981852-426c6c22a060?w=500&auto=format&fit=crop&q=80'
+    image: 'images/moto_cbr250.jpg'
   },
   {
     id: 'moto_ninja',
@@ -1815,7 +1819,7 @@ const LUXURY_CATALOG = [
     price: 118000000,
     icon: '🏍️',
     prestige: 220,
-    image: '/images/moto_ninja.jpg'
+    image: 'images/moto_ninja.jpg'
   },
   {
     id: 'moto_vespa_gts',
@@ -1825,7 +1829,7 @@ const LUXURY_CATALOG = [
     price: 165000000,
     icon: '🛵',
     prestige: 300,
-    image: 'https://images.unsplash.com/photo-1558980664-2506fca6bfc2?w=500&auto=format&fit=crop&q=80'
+    image: 'images/moto_vespa_gts.jpg'
   },
   {
     id: 'moto_yamaha_tmax',
@@ -1835,7 +1839,7 @@ const LUXURY_CATALOG = [
     price: 420000000,
     icon: '🛵',
     prestige: 600,
-    image: 'https://images.unsplash.com/photo-1558981285-6f0c94958bb6?w=500&auto=format&fit=crop&q=80'
+    image: 'images/moto_yamaha_tmax.jpg'
   },
   {
     id: 'moto_harley',
@@ -1845,7 +1849,7 @@ const LUXURY_CATALOG = [
     price: 790000000,
     icon: '🏍️',
     prestige: 900,
-    image: 'https://images.unsplash.com/photo-1558981420-87aa9210d993?w=500&auto=format&fit=crop&q=80'
+    image: 'images/moto_harley.jpg'
   },
   {
     id: 'moto_ducati',
@@ -1855,7 +1859,7 @@ const LUXURY_CATALOG = [
     price: 820000000,
     icon: '🏍️',
     prestige: 1000,
-    image: '/images/moto_ducati.jpg'
+    image: 'images/moto_ducati.jpg'
   },
   {
     id: 'moto_bmw_gs',
@@ -1865,7 +1869,7 @@ const LUXURY_CATALOG = [
     price: 950000000,
     icon: '🏍️',
     prestige: 1200,
-    image: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=500&auto=format&fit=crop&q=80'
+    image: 'images/moto_bmw_gs.jpg'
   },
   {
     id: 'moto_honda_goldwing',
@@ -1875,7 +1879,7 @@ const LUXURY_CATALOG = [
     price: 1100000000,
     icon: '🏍️',
     prestige: 1500,
-    image: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=500&auto=format&fit=crop&q=80'
+    image: 'images/moto_honda_goldwing.jpg'
   },
   {
     id: 'moto_mv_agusta',
@@ -1885,7 +1889,7 @@ const LUXURY_CATALOG = [
     price: 1450000000,
     icon: '🏍️',
     prestige: 2000,
-    image: 'https://images.unsplash.com/photo-1558981408-db0ecd8a1ee4?w=500&auto=format&fit=crop&q=80'
+    image: 'images/moto_mv_agusta.jpg'
   },
   {
     id: 'moto_ducati_superleggera',
@@ -1895,7 +1899,7 @@ const LUXURY_CATALOG = [
     price: 3200000000,
     icon: '🏍️',
     prestige: 4000,
-    image: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=500&auto=format&fit=crop&q=80'
+    image: 'images/moto_ducati_superleggera.jpg'
   },
 
   // ==========================================
@@ -1909,7 +1913,7 @@ const LUXURY_CATALOG = [
     price: 88000000,
     icon: '🚗',
     prestige: 120,
-    image: '/images/car_ayla.jpg'
+    image: 'images/car_ayla.jpg'
   },
   {
     id: 'car_calya',
@@ -1919,7 +1923,7 @@ const LUXURY_CATALOG = [
     price: 175000000,
     icon: '🚗',
     prestige: 240,
-    image: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=500&auto=format&fit=crop&q=80'
+    image: 'images/car_calya.jpg'
   },
   {
     id: 'car_brio',
@@ -1929,7 +1933,7 @@ const LUXURY_CATALOG = [
     price: 245000000,
     icon: '🚗',
     prestige: 350,
-    image: '/images/car_brio.jpg'
+    image: 'images/car_brio.jpg'
   },
   {
     id: 'car_xpander',
@@ -1939,7 +1943,7 @@ const LUXURY_CATALOG = [
     price: 320000000,
     icon: '🚐',
     prestige: 450,
-    image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=500&auto=format&fit=crop&q=80'
+    image: 'images/car_xpander.jpg'
   },
   {
     id: 'car_innova',
@@ -1949,7 +1953,7 @@ const LUXURY_CATALOG = [
     price: 485000000,
     icon: '🚐',
     prestige: 600,
-    image: '/images/veh_innova.jpg'
+    image: 'images/veh_innova.jpg'
   },
   {
     id: 'car_civic',
@@ -1959,7 +1963,7 @@ const LUXURY_CATALOG = [
     price: 630000000,
     icon: '🏎️',
     prestige: 850,
-    image: '/images/car_civic.jpg'
+    image: 'images/car_civic.jpg'
   },
   {
     id: 'car_fortuner',
@@ -1969,7 +1973,7 @@ const LUXURY_CATALOG = [
     price: 740000000,
     icon: '🚙',
     prestige: 1000,
-    image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=500&auto=format&fit=crop&q=80'
+    image: 'images/car_fortuner.jpg'
   },
   {
     id: 'car_hyundai_ioniq5',
@@ -1979,7 +1983,7 @@ const LUXURY_CATALOG = [
     price: 890000000,
     icon: '⚡',
     prestige: 1250,
-    image: 'https://images.unsplash.com/photo-1563720223185-11003d516935?w=500&auto=format&fit=crop&q=80'
+    image: 'images/veh_ioniq5.jpg'
   },
   {
     id: 'car_alphard',
@@ -1989,7 +1993,7 @@ const LUXURY_CATALOG = [
     price: 1720000000,
     icon: '👑',
     prestige: 2200,
-    image: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=500&auto=format&fit=crop&q=80'
+    image: 'images/veh_alphard.jpg'
   },
   {
     id: 'car_bmw',
@@ -1999,7 +2003,7 @@ const LUXURY_CATALOG = [
     price: 2750000000,
     icon: '🏎️',
     prestige: 3200,
-    image: '/images/car_bmw.jpg'
+    image: 'images/car_bmw.jpg'
   },
   {
     id: 'car_lexus_lm',
@@ -2009,7 +2013,7 @@ const LUXURY_CATALOG = [
     price: 3250000000,
     icon: '👑',
     prestige: 4000,
-    image: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=500&auto=format&fit=crop&q=80'
+    image: 'images/car_lexus_lm.jpg'
   },
   {
     id: 'car_gwagon',
@@ -2019,7 +2023,7 @@ const LUXURY_CATALOG = [
     price: 6800000000,
     icon: '🚙',
     prestige: 6500,
-    image: '/images/car_gwagon.jpg'
+    image: 'images/car_gwagon.jpg'
   },
   {
     id: 'car_porsche',
@@ -2029,7 +2033,7 @@ const LUXURY_CATALOG = [
     price: 8900000000,
     icon: '🏎️',
     prestige: 9000,
-    image: '/images/car_porsche.jpg'
+    image: 'images/car_porsche.jpg'
   },
   {
     id: 'car_urus',
@@ -2039,7 +2043,7 @@ const LUXURY_CATALOG = [
     price: 11500000000,
     icon: '🐂',
     prestige: 12500,
-    image: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=500&auto=format&fit=crop&q=80'
+    image: 'images/car_urus.jpg'
   },
   {
     id: 'car_ferrari',
@@ -2049,7 +2053,7 @@ const LUXURY_CATALOG = [
     price: 18500000000,
     icon: '🐎',
     prestige: 19000,
-    image: '/images/car_ferrari.jpg'
+    image: 'images/car_ferrari.jpg'
   },
   {
     id: 'car_lambo',
@@ -2059,7 +2063,7 @@ const LUXURY_CATALOG = [
     price: 26000000000,
     icon: '🐂',
     prestige: 26000,
-    image: '/images/car_lambo.jpg'
+    image: 'images/car_lambo.jpg'
   },
   {
     id: 'car_rolls',
@@ -2069,7 +2073,7 @@ const LUXURY_CATALOG = [
     price: 34000000000,
     icon: '👑',
     prestige: 35000,
-    image: '/images/car_rolls.jpg'
+    image: 'images/car_rolls.jpg'
   },
   {
     id: 'car_pagani',
@@ -2079,7 +2083,7 @@ const LUXURY_CATALOG = [
     price: 65000000000,
     icon: '🚀',
     prestige: 60000,
-    image: 'https://images.unsplash.com/photo-1544829099-b9a0c07fad1a?w=500&auto=format&fit=crop&q=80'
+    image: 'images/car_pagani.jpg'
   },
   {
     id: 'car_bugatti',
@@ -2089,7 +2093,7 @@ const LUXURY_CATALOG = [
     price: 88000000000,
     icon: '🏁',
     prestige: 85000,
-    image: '/images/car_bugatti.jpg'
+    image: 'images/car_bugatti.jpg'
   },
   {
     id: 'car_koenigsegg',
@@ -2099,7 +2103,7 @@ const LUXURY_CATALOG = [
     price: 145000000000,
     icon: '🚀',
     prestige: 140000,
-    image: '/images/car_koenigsegg.jpg'
+    image: 'images/car_koenigsegg.jpg'
   },
 
   // ==========================================
@@ -2113,7 +2117,7 @@ const LUXURY_CATALOG = [
     price: 4500000,
     icon: '⌚',
     prestige: 10,
-    image: 'https://images.unsplash.com/photo-1524805444758-089113d48a6d?w=500&auto=format&fit=crop&q=80'
+    image: 'images/watch_seiko.jpg'
   },
   {
     id: 'watch_tissot',
@@ -2123,7 +2127,7 @@ const LUXURY_CATALOG = [
     price: 12000000,
     icon: '⌚',
     prestige: 25,
-    image: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=500&auto=format&fit=crop&q=80'
+    image: 'images/watch_tissot.jpg'
   },
   {
     id: 'watch_tag_heuer',
@@ -2133,7 +2137,7 @@ const LUXURY_CATALOG = [
     price: 45000000,
     icon: '⌚',
     prestige: 80,
-    image: 'https://images.unsplash.com/photo-1547996160-71dfabb1a7cf?w=500&auto=format&fit=crop&q=80'
+    image: 'images/watch_tag_heuer.jpg'
   },
   {
     id: 'watch_tudor',
@@ -2143,7 +2147,7 @@ const LUXURY_CATALOG = [
     price: 68000000,
     icon: '⌚',
     prestige: 120,
-    image: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=500&auto=format&fit=crop&q=80'
+    image: 'images/watch_tudor.jpg'
   },
   {
     id: 'watch_breitling',
@@ -2153,7 +2157,7 @@ const LUXURY_CATALOG = [
     price: 125000000,
     icon: '⌚',
     prestige: 200,
-    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=80'
+    image: 'images/watch_breitling.jpg'
   },
   {
     id: 'watch_omega_speedmaster',
@@ -2163,7 +2167,7 @@ const LUXURY_CATALOG = [
     price: 135000000,
     icon: '⌚',
     prestige: 240,
-    image: 'https://images.unsplash.com/photo-1533139502658-0198f920d8e8?w=500&auto=format&fit=crop&q=80'
+    image: 'images/watch_omega.jpg'
   },
   {
     id: 'watch_cartier',
@@ -2173,7 +2177,7 @@ const LUXURY_CATALOG = [
     price: 190000000,
     icon: '⌚',
     prestige: 320,
-    image: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=500&auto=format&fit=crop&q=80'
+    image: 'images/watch_cartier.jpg'
   },
   {
     id: 'watch_rolex',
@@ -2183,7 +2187,7 @@ const LUXURY_CATALOG = [
     price: 280000000,
     icon: '⌚',
     prestige: 450,
-    image: '/images/watch_rolex.jpg'
+    image: 'images/watch_rolex.jpg'
   },
   {
     id: 'watch_rolex_daytona',
@@ -2193,7 +2197,7 @@ const LUXURY_CATALOG = [
     price: 420000000,
     icon: '⌚',
     prestige: 650,
-    image: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=500&auto=format&fit=crop&q=80'
+    image: 'images/watch_rolex_daytona.jpg'
   },
   {
     id: 'watch_rolex_daydate',
@@ -2203,7 +2207,7 @@ const LUXURY_CATALOG = [
     price: 680000000,
     icon: '⌚',
     prestige: 950,
-    image: 'https://images.unsplash.com/photo-1524805444758-089113d48a6d?w=500&auto=format&fit=crop&q=80'
+    image: 'images/watch_rolex_daydate.jpg'
   },
   {
     id: 'watch_ap',
@@ -2213,7 +2217,7 @@ const LUXURY_CATALOG = [
     price: 850000000,
     icon: '⌚',
     prestige: 1200,
-    image: '/images/watch_ap.jpg'
+    image: 'images/watch_ap.jpg'
   },
   {
     id: 'watch_vacheron',
@@ -2223,7 +2227,7 @@ const LUXURY_CATALOG = [
     price: 980000000,
     icon: '⌚',
     prestige: 1400,
-    image: 'https://images.unsplash.com/photo-1547996160-71dfabb1a7cf?w=500&auto=format&fit=crop&q=80'
+    image: 'images/watch_vacheron.jpg'
   },
   {
     id: 'watch_patek',
@@ -2233,7 +2237,7 @@ const LUXURY_CATALOG = [
     price: 1850000000,
     icon: '⌚',
     prestige: 2500,
-    image: '/images/watch_patek.jpg'
+    image: 'images/watch_patek.jpg'
   },
   {
     id: 'watch_patek_aquanaut',
@@ -2243,7 +2247,7 @@ const LUXURY_CATALOG = [
     price: 2200000000,
     icon: '⌚',
     prestige: 3000,
-    image: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=500&auto=format&fit=crop&q=80'
+    image: 'images/watch_patek_aquanaut.jpg'
   },
   {
     id: 'watch_ap_chrono',
@@ -2253,7 +2257,7 @@ const LUXURY_CATALOG = [
     price: 2900000000,
     icon: '⌚',
     prestige: 4000,
-    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=80'
+    image: 'images/watch_ap_chrono.jpg'
   },
   {
     id: 'watch_rm',
@@ -2263,7 +2267,7 @@ const LUXURY_CATALOG = [
     price: 4900000000,
     icon: '⌚',
     prestige: 6500,
-    image: '/images/watch_rm.jpg'
+    image: 'images/watch_rm.jpg'
   },
   {
     id: 'watch_jacob_astronomia',
@@ -2273,7 +2277,7 @@ const LUXURY_CATALOG = [
     price: 9500000000,
     icon: '🌌',
     prestige: 12000,
-    image: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=500&auto=format&fit=crop&q=80'
+    image: 'images/watch_jacob_astronomia.jpg'
   },
   {
     id: 'watch_rm_bupati',
@@ -2283,7 +2287,7 @@ const LUXURY_CATALOG = [
     price: 17500000000,
     icon: '🏎️',
     prestige: 22000,
-    image: 'https://images.unsplash.com/photo-1533139502658-0198f920d8e8?w=500&auto=format&fit=crop&q=80'
+    image: 'images/watch_rm_bupati.jpg'
   },
   {
     id: 'watch_patek_grandmaster',
@@ -2293,7 +2297,7 @@ const LUXURY_CATALOG = [
     price: 48000000000,
     icon: '👑',
     prestige: 55000,
-    image: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=500&auto=format&fit=crop&q=80'
+    image: 'images/watch_patek_grandmaster.jpg'
   },
   {
     id: 'watch_graff_hallucination',
@@ -2303,7 +2307,7 @@ const LUXURY_CATALOG = [
     price: 120000000000,
     icon: '💎',
     prestige: 130000,
-    image: 'https://images.unsplash.com/photo-1524805444758-089113d48a6d?w=500&auto=format&fit=crop&q=80'
+    image: 'images/watch_graff_hallucination.jpg'
   },
 
   // ==========================================
@@ -3208,3 +3212,824 @@ const COMMODITIES_CATALOG = [
     desc: 'Komoditas pangan pokok strategis dunia. Sangat rentan terhadap gangguan cuaca ekstrem dan rantai pasok.'
   }
 ];
+
+
+// ==========================================
+// COLLECTIONS_CATALOG & RESIDENCE_TIERS
+// ==========================================
+const RESIDENCE_TIERS = [
+  {
+    "level": 1,
+    "name": "Studio Penthouse Sudirman",
+    "price": 2500000000,
+    "prestige": 100,
+    "icon": "🏢"
+  },
+  {
+    "level": 2,
+    "name": "Luxury Townhouse Menteng",
+    "price": 12000000000,
+    "prestige": 350,
+    "icon": "🏡"
+  },
+  {
+    "level": 3,
+    "name": "Cliffside Villa Uluwatu Bali",
+    "price": 35000000000,
+    "prestige": 850,
+    "icon": "🏖️"
+  },
+  {
+    "level": 4,
+    "name": "Modern Minimalist Pondok Indah",
+    "price": 85000000000,
+    "prestige": 2200,
+    "icon": "🏠"
+  },
+  {
+    "level": 5,
+    "name": "Mediterranean Estate Sentosa Cove",
+    "price": 250000000000,
+    "prestige": 6000,
+    "icon": "🏰"
+  },
+  {
+    "level": 6,
+    "name": "French Riviera Coastal Chateau",
+    "price": 850000000000,
+    "prestige": 15000,
+    "icon": "🏛️"
+  },
+  {
+    "level": 7,
+    "name": "Neo-Classical Palace Jakarta",
+    "price": 4300000000000,
+    "prestige": 50000,
+    "icon": "👑"
+  },
+  {
+    "level": 8,
+    "name": "Royal Sovereign Island Estate",
+    "price": 15000000000000,
+    "prestige": 150000,
+    "icon": "🏝️"
+  }
+];
+
+const COLLECTIONS_CATALOG = {
+  "coins": [
+    {
+      "id": "coin_1",
+      "name": "Koin Emas Dinasti Lydian Lion",
+      "price": 450000000,
+      "prestige": 120,
+      "icon": "🪙"
+    },
+    {
+      "id": "coin_2",
+      "name": "Tetradrachm Athena Kuno",
+      "price": 750000000,
+      "prestige": 200,
+      "icon": "🪙"
+    },
+    {
+      "id": "coin_3",
+      "name": "Aureus Julius Caesar 44 SM",
+      "price": 1250000000,
+      "prestige": 350,
+      "icon": "🪙"
+    },
+    {
+      "id": "coin_4",
+      "name": "Solidus Byzantium Emas",
+      "price": 1850000000,
+      "prestige": 500,
+      "icon": "🪙"
+    },
+    {
+      "id": "coin_5",
+      "name": "Dinar Emas Kekhalifahan Umayyah",
+      "price": 2900000000,
+      "prestige": 750,
+      "icon": "🪙"
+    },
+    {
+      "id": "coin_6",
+      "name": "Koin Emas Majapahit Gobog",
+      "price": 4200000000,
+      "prestige": 1100,
+      "icon": "🪙"
+    },
+    {
+      "id": "coin_7",
+      "name": "Florin Emas Edward III 1344",
+      "price": 6800000000,
+      "prestige": 1800,
+      "icon": "🪙"
+    },
+    {
+      "id": "coin_8",
+      "name": "Koin Emas Ducat Venesia",
+      "price": 9500000000,
+      "prestige": 2500,
+      "icon": "🪙"
+    },
+    {
+      "id": "coin_9",
+      "name": "Spanish Eight Reales Doubloon",
+      "price": 14000000000,
+      "prestige": 3600,
+      "icon": "🪙"
+    },
+    {
+      "id": "coin_10",
+      "name": "Brasher Doubloon Emas 1787",
+      "price": 22000000000,
+      "prestige": 5500,
+      "icon": "🪙"
+    },
+    {
+      "id": "coin_11",
+      "name": "1794 Flowing Hair Silver Dollar",
+      "price": 35000000000,
+      "prestige": 8500,
+      "icon": "🪙"
+    },
+    {
+      "id": "coin_12",
+      "name": "1804 Draped Bust Silver Dollar",
+      "price": 50000000000,
+      "prestige": 12500,
+      "icon": "🪙"
+    },
+    {
+      "id": "coin_13",
+      "name": "1849 Double Eagle Proof Pattern",
+      "price": 75000000000,
+      "prestige": 18000,
+      "icon": "🪙"
+    },
+    {
+      "id": "coin_14",
+      "name": "1907 Saint-Gaudens Ultra High Relief",
+      "price": 110000000000,
+      "prestige": 26000,
+      "icon": "🪙"
+    },
+    {
+      "id": "coin_15",
+      "name": "1913 Liberty Head Nickel",
+      "price": 160000000000,
+      "prestige": 38000,
+      "icon": "🪙"
+    },
+    {
+      "id": "coin_16",
+      "name": "1933 Saint-Gaudens Double Eagle",
+      "price": 240000000000,
+      "prestige": 55000,
+      "icon": "🪙"
+    },
+    {
+      "id": "coin_17",
+      "name": "1343 Double Leopard Emas Inggris",
+      "price": 350000000000,
+      "prestige": 80000,
+      "icon": "🪙"
+    },
+    {
+      "id": "coin_18",
+      "name": "Koin Emas Ratu Victoria Una and the Lion",
+      "price": 520000000000,
+      "prestige": 115000,
+      "icon": "🪙"
+    },
+    {
+      "id": "coin_19",
+      "name": "Koin Emas Kekaisaran Romawi Septimius Severus",
+      "price": 780000000000,
+      "prestige": 170000,
+      "icon": "🪙"
+    },
+    {
+      "id": "coin_20",
+      "name": "Koin Emas Kuno Terlangka Di Dunia (Unique)",
+      "price": 1200000000000,
+      "prestige": 250000,
+      "icon": "🪙"
+    }
+  ],
+  "paintings": [
+    {
+      "id": "paint_1",
+      "name": "Sketsa Klasik Leonardo da Vinci",
+      "price": 650000000,
+      "prestige": 150,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_2",
+      "name": "Karya Lanskap Rembrandt",
+      "price": 1200000000,
+      "prestige": 300,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_3",
+      "name": "Potret Claude Monet Nymphéas",
+      "price": 2500000000,
+      "prestige": 600,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_4",
+      "name": "Lukisan Raden Saleh Penangkapan Diponegoro",
+      "price": 4500000000,
+      "prestige": 1100,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_5",
+      "name": "Lanskap Vincent van Gogh Sunflowers",
+      "price": 8000000000,
+      "prestige": 1900,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_6",
+      "name": "The Starry Night - Van Gogh",
+      "price": 15000000000,
+      "prestige": 3500,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_7",
+      "name": "The Scream - Edvard Munch",
+      "price": 25000000000,
+      "prestige": 5800,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_8",
+      "name": "Girl with a Pearl Earring - Vermeer",
+      "price": 40000000000,
+      "prestige": 9000,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_9",
+      "name": "The Kiss - Gustav Klimt",
+      "price": 65000000000,
+      "prestige": 14500,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_10",
+      "name": "The Night Watch - Rembrandt",
+      "price": 95000000000,
+      "prestige": 21000,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_11",
+      "name": "The Birth of Venus - Botticelli",
+      "price": 140000000000,
+      "prestige": 30000,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_12",
+      "name": "Las Meninas - Diego Velázquez",
+      "price": 200000000000,
+      "prestige": 42000,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_13",
+      "name": "Guernica - Pablo Picasso",
+      "price": 280000000000,
+      "prestige": 58000,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_14",
+      "name": "The Persistence of Memory - Salvador Dalí",
+      "price": 380000000000,
+      "prestige": 78000,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_15",
+      "name": "Water Lilies Grand Mural - Monet",
+      "price": 500000000000,
+      "prestige": 105000,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_16",
+      "name": "The Last Supper Study - Da Vinci",
+      "price": 680000000000,
+      "prestige": 140000,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_17",
+      "name": "Creation of Adam Original - Michelangelo",
+      "price": 900000000000,
+      "prestige": 185000,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_18",
+      "name": "Les Femmes d Alger - Picasso",
+      "price": 1200000000000,
+      "prestige": 240000,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_19",
+      "name": "Salvator Mundi - Leonardo da Vinci",
+      "price": 1600000000000,
+      "prestige": 320000,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_20",
+      "name": "Mona Lisa Masterpiece Original - Da Vinci",
+      "price": 2500000000000,
+      "prestige": 500000,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_21",
+      "name": "Impression, Sunrise - Claude Monet",
+      "price": 3500000000000,
+      "prestige": 680000,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_22",
+      "name": "American Gothic - Grant Wood",
+      "price": 4800000000000,
+      "prestige": 900000,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_23",
+      "name": "Wanderer above the Sea of Fog - Friedrich",
+      "price": 6500000000000,
+      "prestige": 1200000,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_24",
+      "name": "Whistler Mother - James McNeill",
+      "price": 8500000000000,
+      "prestige": 1600000,
+      "icon": "🎨"
+    },
+    {
+      "id": "paint_25",
+      "name": "The School of Athens Full Fresco - Raphael",
+      "price": 12000000000000,
+      "prestige": 2200000,
+      "icon": "🎨"
+    }
+  ],
+  "unique": [
+    {
+      "id": "uniq_1",
+      "name": "Mesin Asli Pesawat Wright Flyer 1903",
+      "price": 45000000000,
+      "prestige": 12000,
+      "icon": "🔖"
+    },
+    {
+      "id": "uniq_2",
+      "name": "Salinan Manuskrip Asli Magna Carta 1215",
+      "price": 120000000000,
+      "prestige": 35000,
+      "icon": "🔖"
+    },
+    {
+      "id": "uniq_3",
+      "name": "Buku Catatan Codex Leicester Leonardo Da Vinci",
+      "price": 350000000000,
+      "prestige": 95000,
+      "icon": "🔖"
+    },
+    {
+      "id": "uniq_4",
+      "name": "Telur Emas Musim Dingin Kekaisaran Fabergé",
+      "price": 850000000000,
+      "prestige": 220000,
+      "icon": "🔖"
+    },
+    {
+      "id": "uniq_5",
+      "name": "Topeng Emas Firaun Tutankhamun Sejati",
+      "price": 2500000000000,
+      "prestige": 650000,
+      "icon": "🔖"
+    }
+  ],
+  "retro_cars": [
+    {
+      "id": "retro_1",
+      "name": "1957 Chevrolet Bel Air Nomad",
+      "price": 1200000000,
+      "prestige": 280,
+      "icon": "🚗"
+    },
+    {
+      "id": "retro_2",
+      "name": "1967 Volkswagen Beetle Klasik Mint",
+      "price": 1800000000,
+      "prestige": 420,
+      "icon": "🚗"
+    },
+    {
+      "id": "retro_3",
+      "name": "1959 Cadillac Eldorado Biarritz",
+      "price": 2900000000,
+      "prestige": 680,
+      "icon": "🚗"
+    },
+    {
+      "id": "retro_4",
+      "name": "1964 Lincoln Continental Convertible",
+      "price": 4500000000,
+      "prestige": 1050,
+      "icon": "🚗"
+    },
+    {
+      "id": "retro_5",
+      "name": "1968 Dodge Charger R/T 426 Hemi",
+      "price": 7200000000,
+      "prestige": 1650,
+      "icon": "🚗"
+    },
+    {
+      "id": "retro_6",
+      "name": "1970 Plymouth Hemi Cuda Convertible",
+      "price": 11000000000,
+      "prestige": 2500,
+      "icon": "🚗"
+    },
+    {
+      "id": "retro_7",
+      "name": "1969 Chevrolet Camaro ZL1",
+      "price": 16500000000,
+      "prestige": 3800,
+      "icon": "🚗"
+    },
+    {
+      "id": "retro_8",
+      "name": "1967 Ford Mustang Shelby GT500 Eleonor",
+      "price": 24000000000,
+      "prestige": 5500,
+      "icon": "🚗"
+    },
+    {
+      "id": "retro_9",
+      "name": "1963 Porsche 356C Carrera 2",
+      "price": 36000000000,
+      "prestige": 8200,
+      "icon": "🚗"
+    },
+    {
+      "id": "retro_10",
+      "name": "1973 Porsche 911 Carrera RS 2.7",
+      "price": 55000000000,
+      "prestige": 12500,
+      "icon": "🚗"
+    },
+    {
+      "id": "retro_11",
+      "name": "1961 Jaguar E-Type Series 1 Roadster",
+      "price": 82000000000,
+      "prestige": 18500,
+      "icon": "🚗"
+    },
+    {
+      "id": "retro_12",
+      "name": "1965 Shelby 427 Cobra Original",
+      "price": 125000000000,
+      "prestige": 28000,
+      "icon": "🚗"
+    },
+    {
+      "id": "retro_13",
+      "name": "1955 Mercedes-Benz 300 SL Gullwing",
+      "price": 190000000000,
+      "prestige": 42000,
+      "icon": "🚗"
+    },
+    {
+      "id": "retro_14",
+      "name": "1964 Aston Martin DB5 Silver Birch",
+      "price": 280000000000,
+      "prestige": 60000,
+      "icon": "🚗"
+    },
+    {
+      "id": "retro_15",
+      "name": "1967 Ferrari 275 GTB/4 NART Spider",
+      "price": 420000000000,
+      "prestige": 88000,
+      "icon": "🚗"
+    },
+    {
+      "id": "retro_16",
+      "name": "1971 Lamborghini Miura SV",
+      "price": 620000000000,
+      "prestige": 130000,
+      "icon": "🚗"
+    },
+    {
+      "id": "retro_17",
+      "name": "1937 Bugatti Type 57SC Atalante",
+      "price": 920000000000,
+      "prestige": 190000,
+      "icon": "🚗"
+    },
+    {
+      "id": "retro_18",
+      "name": "1956 Aston Martin DBR1 Le Mans",
+      "price": 1350000000000,
+      "prestige": 280000,
+      "icon": "🚗"
+    },
+    {
+      "id": "retro_19",
+      "name": "1962 Ferrari 250 GTO Scaglietti",
+      "price": 2100000000000,
+      "prestige": 420000,
+      "icon": "🚗"
+    },
+    {
+      "id": "retro_20",
+      "name": "1955 Mercedes-Benz 300 SLR Uhlenhaut",
+      "price": 3500000000000,
+      "prestige": 700000,
+      "icon": "🚗"
+    }
+  ],
+  "stamps": [
+    {
+      "id": "stmp_1",
+      "name": "Perangko Batavia Hindia Belanda 1864",
+      "price": 350000000,
+      "prestige": 90,
+      "icon": "📮"
+    },
+    {
+      "id": "stmp_2",
+      "name": "Perangko Penny Black Inggris 1840",
+      "price": 680000000,
+      "prestige": 175,
+      "icon": "📮"
+    },
+    {
+      "id": "stmp_3",
+      "name": "Two Penny Blue 1840 Cetakan Pertama",
+      "price": 1200000000,
+      "prestige": 310,
+      "icon": "📮"
+    },
+    {
+      "id": "stmp_4",
+      "name": "Perangko Basel Dove Swiss 1845",
+      "price": 2100000000,
+      "prestige": 540,
+      "icon": "📮"
+    },
+    {
+      "id": "stmp_5",
+      "name": "Perangko Bull Eye Brasil 1843",
+      "price": 3600000000,
+      "prestige": 920,
+      "icon": "📮"
+    },
+    {
+      "id": "stmp_6",
+      "name": "Perangko Mauritius Two Pence 1847",
+      "price": 6200000000,
+      "prestige": 1600,
+      "icon": "📮"
+    },
+    {
+      "id": "stmp_7",
+      "name": "1851 Hawaiian Missionaries Stamp",
+      "price": 10500000000,
+      "prestige": 2700,
+      "icon": "📮"
+    },
+    {
+      "id": "stmp_8",
+      "name": "1857 Canada 12d Black Queen Victoria",
+      "price": 17500000000,
+      "prestige": 4400,
+      "icon": "📮"
+    },
+    {
+      "id": "stmp_9",
+      "name": "1868 Benjamin Franklin 1c Z-Grill",
+      "price": 29000000000,
+      "prestige": 7200,
+      "icon": "📮"
+    },
+    {
+      "id": "stmp_10",
+      "name": "1897 Red Revenue Small One Dollar China",
+      "price": 48000000000,
+      "prestige": 11800,
+      "icon": "📮"
+    },
+    {
+      "id": "stmp_11",
+      "name": "1918 24c Inverted Jenny Curtiss JN-4",
+      "price": 78000000000,
+      "prestige": 19000,
+      "icon": "📮"
+    },
+    {
+      "id": "stmp_12",
+      "name": "1855 Sweden Treskilling Yellow Error",
+      "price": 125000000000,
+      "prestige": 30000,
+      "icon": "📮"
+    },
+    {
+      "id": "stmp_13",
+      "name": "1851 Baden 9 Kreuzer Green Error",
+      "price": 195000000000,
+      "prestige": 47000,
+      "icon": "📮"
+    },
+    {
+      "id": "stmp_14",
+      "name": "1847 Mauritius One Penny Post Office",
+      "price": 310000000000,
+      "prestige": 75000,
+      "icon": "📮"
+    },
+    {
+      "id": "stmp_15",
+      "name": "1856 British Guiana 1c Magenta (Holy Grail)",
+      "price": 550000000000,
+      "prestige": 130000,
+      "icon": "📮"
+    }
+  ],
+  "jewels": [
+    {
+      "id": "jwl_1",
+      "name": "Cincin Safir Biru Ceylon Alami 5 Karat",
+      "price": 550000000,
+      "prestige": 150,
+      "icon": "💎"
+    },
+    {
+      "id": "jwl_2",
+      "name": "Gelang Emas Putih Berlian Tiffany & Co.",
+      "price": 950000000,
+      "prestige": 260,
+      "icon": "💎"
+    },
+    {
+      "id": "jwl_3",
+      "name": "Kalung Zamrud Kolombia Muzo Hijau Royal",
+      "price": 1800000000,
+      "prestige": 480,
+      "icon": "💎"
+    },
+    {
+      "id": "jwl_4",
+      "name": "Rolex Daytona 'Paul Newman' Ref. 6239",
+      "price": 3500000000,
+      "prestige": 950,
+      "icon": "👑",
+      "image": "images/watch_rolex_daytona.jpg"
+    },
+    {
+      "id": "jwl_5",
+      "name": "Bros Berlian Cartier Art Deco 1920",
+      "price": 6200000000,
+      "prestige": 1650,
+      "icon": "👑"
+    },
+    {
+      "id": "jwl_6",
+      "name": "Patek Philippe Nautilus 5711/1R Rose Gold",
+      "price": 10500000000,
+      "prestige": 2700,
+      "icon": "👑",
+      "image": "images/watch_patek.jpg"
+    },
+    {
+      "id": "jwl_7",
+      "name": "Tiara Mutiara Alami Basra & Berlian Ratu",
+      "price": 18000000000,
+      "prestige": 4500,
+      "icon": "👑"
+    },
+    {
+      "id": "jwl_8",
+      "name": "Audemars Piguet Royal Oak Openworked",
+      "price": 28000000000,
+      "prestige": 7000,
+      "icon": "👑",
+      "image": "images/watch_ap.jpg"
+    },
+    {
+      "id": "jwl_9",
+      "name": "Cincin Berlian Kuning Fancy Vivid 12 Karat",
+      "price": 45000000000,
+      "prestige": 11000,
+      "icon": "💎"
+    },
+    {
+      "id": "jwl_10",
+      "name": "Vacheron Constantin Tourbillon Skeleton",
+      "price": 72000000000,
+      "prestige": 17500,
+      "icon": "👑",
+      "image": "images/watch_vacheron.jpg"
+    },
+    {
+      "id": "jwl_11",
+      "name": "Kalung Rubi Burma 'Pigeon Blood' 15 Karat",
+      "price": 115000000000,
+      "prestige": 28000,
+      "icon": "💎"
+    },
+    {
+      "id": "jwl_12",
+      "name": "Richard Mille RM 052 Skull Tourbillon",
+      "price": 180000000000,
+      "prestige": 43000,
+      "icon": "👑",
+      "image": "images/watch_rm.jpg"
+    },
+    {
+      "id": "jwl_13",
+      "name": "Berlian Biru 'De Beers Cullinan' 15 Karat",
+      "price": 280000000000,
+      "prestige": 68000,
+      "icon": "💎"
+    },
+    {
+      "id": "jwl_14",
+      "name": "Jacob & Co. Astronomia Tourbillon Baguette",
+      "price": 420000000000,
+      "prestige": 100000,
+      "icon": "👑",
+      "image": "images/watch_jacob_astronomia.jpg"
+    },
+    {
+      "id": "jwl_15",
+      "name": "Mahkota Emas Permata Dinasti Bourbon-Parma",
+      "price": 650000000000,
+      "prestige": 155000,
+      "icon": "👑"
+    },
+    {
+      "id": "jwl_16",
+      "name": "Patek Philippe Grandmaster Chime 6300G",
+      "price": 980000000000,
+      "prestige": 230000,
+      "icon": "👑",
+      "image": "images/watch_patek_grandmaster.jpg"
+    },
+    {
+      "id": "jwl_17",
+      "name": "The Pink Star Diamond 59.60 Karat",
+      "price": 1450000000000,
+      "prestige": 340000,
+      "icon": "💎"
+    },
+    {
+      "id": "jwl_18",
+      "name": "Graff Diamonds Hallucination 110 Karat",
+      "price": 2100000000000,
+      "prestige": 500000,
+      "icon": "👑",
+      "image": "images/watch_graff_hallucination.jpg"
+    },
+    {
+      "id": "jwl_19",
+      "name": "Berlian Koh-i-Noor Mahkota Monarki Britania",
+      "price": 3200000000000,
+      "prestige": 750000,
+      "icon": "👑"
+    },
+    {
+      "id": "jwl_20",
+      "name": "The Hope Diamond 45.52 Karat & Brankas Abadi",
+      "price": 5000000000000,
+      "prestige": 1200000,
+      "icon": "👑"
+    }
+  ]
+};

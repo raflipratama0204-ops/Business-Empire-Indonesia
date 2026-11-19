@@ -48,9 +48,29 @@ Object.assign(GameEngine.prototype, {
     }
 
     // Luxury
-    for (const id of this.state.luxury) {
-      const lux = LUXURY_CATALOG.find(x => x.id === id);
-      if (lux) nw += lux.price;
+    if (Array.isArray(this.state.luxury)) {
+      for (const id of this.state.luxury) {
+        const lux = LUXURY_CATALOG.find(x => x.id === id);
+        if (lux) nw += lux.price;
+      }
+    }
+
+    // Residence (Tempat Tinggal Mewah)
+    const resLevel = this.state.residenceLevel || 1;
+    if (typeof RESIDENCE_TIERS !== 'undefined' && RESIDENCE_TIERS[resLevel - 1]) {
+      nw += RESIDENCE_TIERS[resLevel - 1].price || 0;
+    }
+
+    // Collections (Koleksi Kemewahan: Koin, Lukisan, Mobil Retro, dsb)
+    if (this.state.collections && typeof this.state.collections === 'object' && typeof COLLECTIONS_CATALOG !== 'undefined') {
+      for (const [collKey, itemIds] of Object.entries(this.state.collections)) {
+        if (Array.isArray(itemIds) && COLLECTIONS_CATALOG[collKey]) {
+          itemIds.forEach(itemId => {
+            const item = COLLECTIONS_CATALOG[collKey].find(x => x.id === itemId);
+            if (item) nw += item.price;
+          });
+        }
+      }
     }
 
     // Ekuitas Posisi Trading Komoditas (Margin + Floating PnL)

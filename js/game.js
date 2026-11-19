@@ -32,6 +32,7 @@ class GameEngine {
     this.commodityDetailSymbol = null;
     this.commodityOrderType = 'LONG'; // 'LONG' | 'SHORT'
     this.commodityOrderLeverage = 5;
+    this.lastMarketTickTime = Date.now();
   }
 
   getDefaultState() {
@@ -162,7 +163,26 @@ class GameEngine {
 
   tick() {
     this.subTickTimer += this.speed;
-    this.simulateMarketTick();
+
+    // Otomatis ubah harga saham, kripto, ataupun komoditas setiap 1 menit (60 detik) dunia nyata
+    const now = Date.now();
+    if (!this.lastMarketTickTime) this.lastMarketTickTime = now;
+    const elapsedMarketSec = Math.floor((now - this.lastMarketTickTime) / 1000);
+
+    if (elapsedMarketSec >= 60) {
+      this.lastMarketTickTime = now;
+      this.simulateMarketTick(true);
+      if (this.activeTab === 'invest') {
+        this.renderInvestments();
+      }
+      if (typeof this.updateOpenMarketModal === 'function') {
+        this.updateOpenMarketModal();
+      }
+    }
+
+    if (typeof this.updateMarketCountdown === 'function') {
+      this.updateMarketCountdown(Math.max(0, 60 - elapsedMarketSec));
+    }
 
     // Cek Penyelesaian Proyek Upgrade Bisnis & Konstruksi Garasi / Gudang (Real-World Timer)
     if (Array.isArray(this.state.businesses)) {
@@ -1140,9 +1160,29 @@ Object.assign(GameEngine.prototype, {
     }
 
     // Luxury
-    for (const id of this.state.luxury) {
-      const lux = LUXURY_CATALOG.find(x => x.id === id);
-      if (lux) nw += lux.price;
+    if (Array.isArray(this.state.luxury)) {
+      for (const id of this.state.luxury) {
+        const lux = LUXURY_CATALOG.find(x => x.id === id);
+        if (lux) nw += lux.price;
+      }
+    }
+
+    // Residence (Tempat Tinggal Mewah)
+    const resLevel = this.state.residenceLevel || 1;
+    if (typeof RESIDENCE_TIERS !== 'undefined' && RESIDENCE_TIERS[resLevel - 1]) {
+      nw += RESIDENCE_TIERS[resLevel - 1].price || 0;
+    }
+
+    // Collections (Koleksi Kemewahan: Koin, Lukisan, Mobil Retro, dsb)
+    if (this.state.collections && typeof this.state.collections === 'object' && typeof COLLECTIONS_CATALOG !== 'undefined') {
+      for (const [collKey, itemIds] of Object.entries(this.state.collections)) {
+        if (Array.isArray(itemIds) && COLLECTIONS_CATALOG[collKey]) {
+          itemIds.forEach(itemId => {
+            const item = COLLECTIONS_CATALOG[collKey].find(x => x.id === itemId);
+            if (item) nw += item.price;
+          });
+        }
+      }
     }
 
     // Ekuitas Posisi Trading Komoditas (Margin + Floating PnL)
@@ -2301,6 +2341,63 @@ Object.assign(GameEngine.prototype, {
     this.render();
   },
 
+  sellBusiness(bizId) {
+    const biz = this.state.businesses.find(b => b.instanceId === bizId);
+    if (!biz) return;
+
+    const valuation = this.calculateBusinessValuation(biz);
+    // Persyaratan: Uang hasil penjualan diterima pemain 30% dari kapitalisasi/valuasi bisnis
+    const payout = Math.round(valuation * 0.3);
+
+    // Cek tunggakan pajak mandiri bisnis jika ada
+    const bizTax = this.getBusinessTax(biz);
+    const unpaidTax = (bizTax && bizTax.unpaid) ? bizTax.unpaid : 0;
+
+    let confirmMsg = `Konfirmasi Penjualan / Likuidasi Bisnis:\n\n` +
+      `🏢 Nama Bisnis: "${biz.name}"\n` +
+      `🏛️ Kapitalisasi / Valuasi Pasar: ${this.formatMoney(valuation)}\n` +
+      `💰 Hasil Penjualan Bersih (30%): ${this.formatMoney(payout)}\n`;
+
+    if (unpaidTax > 0) {
+      confirmMsg += `⚠️ Tunggakan Pajak Mandiri: -${this.formatMoney(unpaidTax)} (akan dipotong otomatis)\n`;
+      if (payout < unpaidTax) {
+        confirmMsg += `\n❌ Hasil penjualan tidak cukup melunasi tunggakan pajak (${this.formatMoney(unpaidTax)})! Lunasi pajak terlebih dahulu.`;
+      }
+    }
+
+    confirmMsg += `\nApakah Anda yakin ingin melikuidasi & menjual bisnis ini? Seluruh aset, armada, dan fasilitasnya akan dilikuidasi permanen.`;
+
+    if (!confirm(confirmMsg)) return;
+
+    let netReceived = payout;
+    if (unpaidTax > 0) {
+      if (netReceived < unpaidTax) {
+        window.sound.playError();
+        this.showToast(`Gagal menjual: Hasil penjualan tidak cukup melunasi tunggakan pajak ${this.formatMoney(unpaidTax)}!`, 'error');
+        return;
+      }
+      netReceived -= unpaidTax;
+      this.showToast(`Tunggakan pajak ${this.formatMoney(unpaidTax)} otomatis dilunasi dari hasil likuidasi.`, 'info');
+    }
+
+    this.state.cash += netReceived;
+    this.state.totalEarnedLifetime += netReceived;
+
+    // Hapus bisnis dari daftar kepemilikan
+    this.state.businesses = this.state.businesses.filter(b => b.instanceId !== bizId);
+
+    if (this.selectedBizId === bizId) {
+      this.selectedBizId = null;
+      this.businessView = 'owned';
+    }
+
+    this.saveGame();
+    window.sound.playCash();
+    this.showToast(`Bisnis "${biz.name}" berhasil dijual! Anda menerima ${this.formatMoney(netReceived)} (30% dari kapitalisasi bisnis).`, 'success');
+    this.showOwnedBusinesses();
+    this.render();
+  },
+
   getBusinessUpgradeCost(biz) {
     const sector = BUSINESS_SECTORS.find(s => s.sectorId === biz.sectorId);
     let baseCost = sector ? (sector.baseCost || 50000000) : 50000000;
@@ -3314,50 +3411,570 @@ Object.assign(GameEngine.prototype, {
 // --- BEGIN js/modules/invest.js ---
 // Business Empire: RichMan - Investment System Module (Stocks, Crypto, Real Estate, Luxury)
 Object.assign(GameEngine.prototype, {
-  setStockView(view) {
+  setStockView(view, symbol = null) {
     this.stockView = view;
-    window.sound.playClick();
+    if (symbol) this.selectedStockSymbol = symbol;
+    if (window.sound) window.sound.playClick();
     const port = document.getElementById('stocks-view-portfolio');
     const mkt = document.getElementById('stocks-view-market');
+    const detail = document.getElementById('stocks-view-detail');
     if (port && mkt) {
+      port.classList.add('hidden');
+      mkt.classList.add('hidden');
+      if (detail) detail.classList.add('hidden');
+
       if (view === 'portfolio') {
         port.classList.remove('hidden');
-        port.classList.remove('view-transition');
-        void port.offsetWidth;
-        port.classList.add('view-transition');
-        mkt.classList.add('hidden');
-      } else {
-        port.classList.add('hidden');
+        this.renderStockList();
+      } else if (view === 'market') {
         mkt.classList.remove('hidden');
-        mkt.classList.remove('view-transition');
-        void mkt.offsetWidth;
-        mkt.classList.add('view-transition');
+        this.renderStockList();
+      } else if (view === 'detail') {
+        if (detail) detail.classList.remove('hidden');
+        this.renderStockDetail(this.selectedStockSymbol);
       }
     }
-    this.renderStockList();
   },
 
-  setCryptoView(view) {
+  setCryptoView(view, symbol = null) {
     this.cryptoView = view;
-    window.sound.playClick();
+    if (symbol) this.selectedCryptoSymbol = symbol;
+    if (window.sound) window.sound.playClick();
     const port = document.getElementById('crypto-view-portfolio');
     const mkt = document.getElementById('crypto-view-market');
+    const detail = document.getElementById('crypto-view-detail');
     if (port && mkt) {
+      port.classList.add('hidden');
+      mkt.classList.add('hidden');
+      if (detail) detail.classList.add('hidden');
+
       if (view === 'portfolio') {
         port.classList.remove('hidden');
-        port.classList.remove('view-transition');
-        void port.offsetWidth;
-        port.classList.add('view-transition');
-        mkt.classList.add('hidden');
-      } else {
-        port.classList.add('hidden');
+        this.renderCryptoList();
+      } else if (view === 'market') {
         mkt.classList.remove('hidden');
-        mkt.classList.remove('view-transition');
-        void mkt.offsetWidth;
-        mkt.classList.add('view-transition');
+        this.renderCryptoList();
+      } else if (view === 'detail') {
+        if (detail) detail.classList.remove('hidden');
+        this.renderCryptoDetail(this.selectedCryptoSymbol);
       }
     }
-    this.renderCryptoList();
+  },
+
+  openStockDetail(symbol) {
+    this.previousStockView = (this.stockView === 'detail' ? 'portfolio' : (this.stockView || 'portfolio'));
+    const userHold = this.state.stocks[symbol] || { shares: 0 };
+    this.stockTradeMode = userHold.shares > 0 ? 'sell' : 'buy';
+    this.setStockView('detail', symbol);
+  },
+
+  closeStockDetail() {
+    this.setStockView(this.previousStockView || 'portfolio');
+  },
+
+  openCryptoDetail(symbol) {
+    this.previousCryptoView = (this.cryptoView === 'detail' ? 'portfolio' : (this.cryptoView || 'portfolio'));
+    const userHold = this.state.crypto[symbol] || { amount: 0 };
+    this.cryptoTradeMode = userHold.amount > 0.00001 ? 'sell' : 'buy';
+    this.setCryptoView('detail', symbol);
+  },
+
+  closeCryptoDetail() {
+    this.setCryptoView(this.previousCryptoView || 'portfolio');
+  },
+
+  setStockTradeMode(mode) {
+    this.stockTradeMode = mode;
+    if (window.sound) window.sound.playClick();
+    if (this.selectedStockSymbol) {
+      this.renderStockDetail(this.selectedStockSymbol);
+    }
+  },
+
+  setCryptoTradeMode(mode) {
+    this.cryptoTradeMode = mode;
+    if (window.sound) window.sound.playClick();
+    if (this.selectedCryptoSymbol) {
+      this.renderCryptoDetail(this.selectedCryptoSymbol);
+    }
+  },
+
+  generateAssetDetailChartSvg(history, strokeColor = '#3b82f6', gradId = 'chart-grad') {
+    if (!history || history.length === 0) return null;
+    const cleanHist = history.length === 1 ? [history[0], history[0]] : history;
+    const minVal = Math.min(...cleanHist);
+    const maxVal = Math.max(...cleanHist);
+    const range = (maxVal - minVal) || 1;
+
+    const svgWidth = 320;
+    const svgHeight = 150;
+    const padTop = 14;
+    const padBottom = 14;
+    const chartH = svgHeight - padTop - padBottom;
+
+    const points = cleanHist.map((val, idx) => {
+      const x = (idx / (cleanHist.length - 1)) * svgWidth;
+      const y = padTop + (1 - (val - minVal) / range) * chartH;
+      return { x: Number(x.toFixed(1)), y: Number(y.toFixed(1)), val };
+    });
+
+    const pathLine = 'M ' + points.map(p => `${p.x},${p.y}`).join(' L ');
+    const pathArea = `M 0,${svgHeight} L ` + points.map(p => `${p.x},${p.y}`).join(' L ') + ` L ${svgWidth},${svgHeight} Z`;
+    const lastPoint = points[points.length - 1];
+
+    const yLabels = [
+      maxVal,
+      maxVal - range * 0.33,
+      minVal + range * 0.33,
+      minVal
+    ];
+
+    const now = new Date();
+    const xLabels = [];
+    for (let i = 4; i >= 0; i--) {
+      const t = new Date(now.getTime() - i * 6 * 60 * 1000);
+      const hh = String(t.getHours()).padStart(2, '0');
+      const mm = String(t.getMinutes()).padStart(2, '0');
+      xLabels.push(`${hh}:${mm}`);
+    }
+
+    return {
+      svgWidth,
+      svgHeight,
+      pathLine,
+      pathArea,
+      lastPoint,
+      yLabels,
+      xLabels
+    };
+  },
+
+  renderStockDetail(symbol) {
+    const container = document.getElementById('stocks-view-detail');
+    if (!container) return;
+
+    const stock = STOCKS_CATALOG.find(x => x.symbol === symbol);
+    if (!stock) return;
+
+    this.selectedStockSymbol = symbol;
+    const price = this.stockPrices[symbol] || stock.basePrice;
+    const history = this.stockHistories[symbol] || [stock.basePrice];
+    const userHold = this.state.stocks[symbol] || { shares: 0, totalCost: 0 };
+    const holdValue = userHold.shares * price;
+    const pnl = holdValue - userHold.totalCost;
+    const pnlPercent = userHold.totalCost > 0 ? (pnl / userHold.totalCost) * 100 : 0;
+    const totalShares = stock.totalShares || (Math.round((stock.basePrice * 100000000) / 10000) + 100000000);
+    const ownershipPercent = totalShares > 0 ? (userHold.shares / totalShares) * 100 : 0;
+    const isModeSell = this.stockTradeMode === 'sell';
+
+    const chartData = this.generateAssetDetailChartSvg(history, '#3b82f6', 'stock-chart-grad');
+
+    let html = `
+      <!-- Top Bar: Back Button & Header -->
+      <div class="flex items-center justify-between mb-1">
+        <button onclick="game.closeStockDetail()" class="btn-press p-2 -ml-1 rounded-2xl bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-base flex items-center justify-center font-bold gap-1 shadow-sm">
+          <span>← Kembali</span>
+        </button>
+        <div class="text-[11px] font-mono text-slate-400">Bursa Efek Indonesia</div>
+      </div>
+
+      <!-- Company Logo & Name Header (Sesuai Screenshot Saham) -->
+      <div class="flex flex-col items-center justify-center py-2 mb-1">
+        <div class="w-16 h-16 rounded-full bg-gradient-to-br from-red-600/20 to-red-900/40 border-2 border-red-500/50 text-red-400 flex items-center justify-center text-3xl font-black shadow-xl mb-2">
+          ${stock.icon || '🏛️'}
+        </div>
+        <h2 class="text-xl font-black text-white text-center tracking-tight">${stock.name}</h2>
+        <div class="flex items-center gap-1.5 mt-0.5">
+          <span class="px-2 py-0.5 rounded-md bg-slate-800 text-blue-400 font-mono font-bold text-xs">${stock.symbol}</span>
+          <span class="text-xs text-slate-400 font-medium">• ${stock.category}</span>
+        </div>
+      </div>
+
+      <!-- Real-Time Price Chart (Area Chart + Gradient Fill + Gridlines Sesuai Gambar) -->
+      ${chartData ? `
+        <div class="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800/90 shadow-lg my-2">
+          <div class="relative flex">
+            <!-- Y-Axis Labels -->
+            <div class="w-16 shrink-0 flex flex-col justify-between text-[10px] font-mono text-slate-400 pr-2 border-r border-slate-800/60 select-none py-1">
+              ${chartData.yLabels.map(y => `<span class="truncate">${this.formatCompact(y)}</span>`).join('')}
+            </div>
+
+            <!-- SVG Chart Canvas -->
+            <div class="flex-1 relative overflow-hidden pl-1.5" style="height: 145px;">
+              <!-- Horizontal Gridlines -->
+              <div class="absolute inset-0 flex flex-col justify-between pointer-events-none py-1">
+                <div class="w-full border-b border-slate-800/50"></div>
+                <div class="w-full border-b border-slate-800/50"></div>
+                <div class="w-full border-b border-slate-800/50"></div>
+                <div class="w-full border-b border-slate-800/50"></div>
+              </div>
+
+              <svg viewBox="0 0 ${chartData.svgWidth} ${chartData.svgHeight}" preserveAspectRatio="none" class="w-full h-full relative z-10 overflow-visible">
+                <defs>
+                  <linearGradient id="stock-chart-grad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.35" />
+                    <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.0" />
+                  </linearGradient>
+                </defs>
+                <path d="${chartData.pathArea}" fill="url(#stock-chart-grad)" />
+                <path d="${chartData.pathLine}" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                <circle cx="${chartData.lastPoint.x}" cy="${chartData.lastPoint.y}" r="4.5" fill="#60a5fa" class="drop-shadow-md" />
+                <circle cx="${chartData.lastPoint.x}" cy="${chartData.lastPoint.y}" r="8" fill="#3b82f6" opacity="0.3" class="animate-ping" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- X-Axis Timestamps (Sesuai Gambar: 23:49 00:13 00:38 01:02 01:27) -->
+          <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 pl-16 pt-2 border-t border-slate-800/60 mt-1 select-none">
+            ${chartData.xLabels.map(t => `<span>${t}</span>`).join('')}
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- Action Buttons: [ Sell ] and [ Buy more ] (Sesuai Screenshot) -->
+      <div class="grid grid-cols-2 gap-3 my-3">
+        <button onclick="game.setStockTradeMode('sell')" class="btn-press py-3 rounded-2xl ${isModeSell ? 'bg-blue-600 text-white font-black shadow-lg shadow-blue-600/30 ring-2 ring-blue-400' : 'bg-slate-800/90 text-slate-300 hover:text-white font-bold border border-slate-700/80'} text-sm transition text-center flex items-center justify-center gap-1.5">
+          <span>Sell</span>
+        </button>
+        <button onclick="game.setStockTradeMode('buy')" class="btn-press py-3 rounded-2xl ${!isModeSell ? 'bg-blue-600 text-white font-black shadow-lg shadow-blue-600/30 ring-2 ring-blue-400' : 'bg-slate-800/90 text-slate-300 hover:text-white font-bold border border-slate-700/80'} text-sm transition text-center flex items-center justify-center gap-1.5">
+          <span>Buy more</span>
+        </button>
+      </div>
+
+      <!-- Trade Execution Form -->
+      <div class="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800/90 mb-4 space-y-3">
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-slate-400 font-semibold">${isModeSell ? 'Portofolio Saham Dimiliki:' : 'Saldo Kas Tunai Tersedia:'}</span>
+          <span class="font-black ${isModeSell ? 'text-blue-400' : 'text-emerald-400'} font-mono">
+            ${isModeSell ? userHold.shares.toLocaleString() + ' Lembar' : this.formatMoney(this.state.cash)}
+          </span>
+        </div>
+
+        <!-- Quick Percent Chips -->
+        <div class="grid grid-cols-4 gap-1.5 text-xs font-bold">
+          <button onclick="game.setStockDetailPercent(0.1)" class="btn-press py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">10%</button>
+          <button onclick="game.setStockDetailPercent(0.25)" class="btn-press py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">25%</button>
+          <button onclick="game.setStockDetailPercent(0.5)" class="btn-press py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">50%</button>
+          <button onclick="game.setStockDetailPercent(1.0)" class="btn-press py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 font-black">Max</button>
+        </div>
+
+        <!-- Input Shares -->
+        <div class="relative">
+          <input id="stock-detail-shares-input" type="number" min="1" placeholder="Masukkan jumlah lembar..." oninput="game.onStockDetailAmountChange(this.value)" class="w-full py-2.5 px-3 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono font-bold text-sm focus:border-blue-500 focus:outline-none">
+          <span class="absolute right-3 top-2.5 text-xs text-slate-400 font-semibold pointer-events-none">Lembar</span>
+        </div>
+
+        <div id="stock-detail-trade-preview" class="text-xs font-semibold text-slate-300 flex items-center justify-between pt-1 border-t border-slate-800/60">
+          <span>Estimasi Nilai:</span>
+          <span id="stock-detail-preview-value" class="font-mono font-bold text-white">Rp 0</span>
+        </div>
+
+        <button onclick="game.executeStockDetailTrade()" class="btn-press w-full py-3 rounded-xl ${isModeSell ? 'bg-rose-600 hover:bg-rose-500 text-white' : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'} font-black text-sm shadow-md transition flex items-center justify-center gap-1.5">
+          <span>${isModeSell ? 'Konfirmasi Penjualan Saham' : 'Konfirmasi Pembelian Saham'}</span>
+        </button>
+      </div>
+
+      <!-- Details Section (Sesuai Gambar: Total cost, Share in the company, Dividend yield & Share price) -->
+      <div class="space-y-3.5 pt-2 border-t border-slate-800">
+        <h4 class="text-base font-black text-white">Details</h4>
+
+        <!-- Total cost -->
+        <div>
+          <div class="text-xs text-slate-400 font-semibold">Total cost</div>
+          <div class="text-2xl font-black text-white font-mono mt-0.5 tracking-tight">${this.formatMoney(holdValue)}</div>
+          <div class="text-xs font-bold ${pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'} mt-0.5 flex items-center gap-1">
+            <span>${pnl >= 0 ? '+' : ''}${this.formatMoney(pnl)} (${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%)</span>
+          </div>
+        </div>
+
+        <!-- Share in the company -->
+        <div>
+          <div class="text-xs text-slate-400 font-semibold mb-1.5">Share in the company</div>
+          <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-1.5">
+            <div class="h-full bg-emerald-400 transition-all rounded-full" style="width: ${Math.min(100, Math.max(userHold.shares > 0 ? 1 : 0, ownershipPercent))}%;"></div>
+          </div>
+          <div class="flex items-center justify-between text-xs font-mono">
+            <span class="font-bold text-slate-200">${ownershipPercent.toFixed(2)} %</span>
+            <span class="text-slate-400">${totalShares.toLocaleString()} pcs.</span>
+          </div>
+        </div>
+
+        <!-- 2 Bottom Cards: Dividend Yield & Share Price -->
+        <div class="grid grid-cols-2 gap-2.5 pt-1">
+          <div class="p-3 rounded-2xl bg-slate-900 border border-slate-800/90 shadow-sm">
+            <div class="text-base font-black text-white font-mono">${(stock.dividendYieldHourly * 100).toFixed(2)} %</div>
+            <div class="text-[10px] text-slate-400 mt-1">Dividend yield in the period*</div>
+          </div>
+          <div class="p-3 rounded-2xl bg-slate-900 border border-slate-800/90 shadow-sm">
+            <div class="text-base font-black text-white font-mono">${this.formatMoney(price)}</div>
+            <div class="text-[10px] text-slate-400 mt-1">Share price</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    container.innerHTML = html;
+  },
+
+  onStockDetailAmountChange(val) {
+    const shares = parseInt(val) || 0;
+    const price = this.stockPrices[this.selectedStockSymbol] || 0;
+    const total = shares * price;
+    const el = document.getElementById('stock-detail-preview-value');
+    if (el) {
+      el.innerText = this.formatMoney(total);
+    }
+  },
+
+  setStockDetailPercent(pct) {
+    const symbol = this.selectedStockSymbol;
+    if (!symbol) return;
+    const price = this.stockPrices[symbol] || 1;
+    const isModeSell = this.stockTradeMode === 'sell';
+    let shares = 0;
+
+    if (isModeSell) {
+      const userHold = this.state.stocks[symbol] || { shares: 0 };
+      shares = Math.floor(userHold.shares * pct);
+    } else {
+      const maxCash = this.state.cash * pct;
+      shares = Math.floor(maxCash / price);
+    }
+
+    const input = document.getElementById('stock-detail-shares-input');
+    if (input) {
+      input.value = shares > 0 ? shares : '';
+      this.onStockDetailAmountChange(input.value);
+    }
+  },
+
+  executeStockDetailTrade() {
+    const symbol = this.selectedStockSymbol;
+    if (!symbol) return;
+    const input = document.getElementById('stock-detail-shares-input');
+    const shares = parseInt(input ? input.value : 0) || 0;
+    if (shares <= 0) {
+      this.showToast('Masukkan jumlah lembar saham yang valid!', 'error');
+      return;
+    }
+
+    if (this.stockTradeMode === 'sell') {
+      this.sellStock(symbol, shares);
+    } else {
+      this.buyStock(symbol, shares);
+    }
+
+    // Refresh detail screen
+    this.renderStockDetail(symbol);
+  },
+
+  renderCryptoDetail(symbol) {
+    const container = document.getElementById('crypto-view-detail');
+    if (!container) return;
+
+    const coin = CRYPTO_CATALOG.find(x => x.symbol === symbol);
+    if (!coin) return;
+
+    this.selectedCryptoSymbol = symbol;
+    const price = this.cryptoPrices[symbol] || coin.basePrice;
+    const history = this.cryptoHistories[symbol] || [coin.basePrice];
+    const userHold = this.state.crypto[symbol] || { amount: 0, totalCost: 0 };
+    const holdValue = userHold.amount * price;
+    const pnl = holdValue - userHold.totalCost;
+    const pnlPercent = userHold.totalCost > 0 ? (pnl / userHold.totalCost) * 100 : 0;
+    const isModeSell = this.cryptoTradeMode === 'sell';
+
+    const chartData = this.generateAssetDetailChartSvg(history, '#3b82f6', 'crypto-chart-grad');
+
+    let html = `
+      <!-- Top Bar: Back Button -->
+      <div class="flex items-center justify-between mb-1">
+        <button onclick="game.closeCryptoDetail()" class="btn-press p-2 -ml-1 rounded-2xl bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-base flex items-center justify-center font-bold gap-1 shadow-sm">
+          <span>← Kembali</span>
+        </button>
+        <div class="text-[11px] font-mono text-slate-400">Pasar Kripto Global</div>
+      </div>
+
+      <!-- Coin Logo, Owned Amount & Pill (Sesuai Screenshot Kripto) -->
+      <div class="flex flex-col items-center justify-center py-2 mb-1">
+        <div class="w-16 h-16 rounded-full shadow-2xl mb-2 overflow-hidden flex items-center justify-center bg-slate-900 border border-amber-500/30">
+          <img src="${coin.logo || 'images/crypto_bitcoin.svg'}" alt="${coin.name}" class="w-full h-full object-contain">
+        </div>
+        <h2 class="text-xl sm:text-2xl font-black text-white text-center font-mono tracking-tight">
+          ${userHold.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} ${coin.symbol}
+        </h2>
+
+        <!-- Pill Box: Total Value & Gain Indicator (Sesuai Gambar) -->
+        <div class="mt-2.5 px-4 py-2 rounded-2xl bg-slate-900/90 border border-slate-800/90 text-center shadow-md">
+          <div class="text-base font-black text-white font-mono">${this.formatMoney(holdValue)}</div>
+          <div class="text-xs font-bold ${pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'} mt-0.5 flex items-center justify-center gap-1">
+            <span>${pnl >= 0 ? '▲' : '▼'} ${pnl >= 0 ? '+' : ''}${this.formatMoney(pnl)} (${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)} %)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real-Time Price Chart (Area Chart + Gradient Fill + Gridlines Sesuai Gambar) -->
+      ${chartData ? `
+        <div class="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800/90 shadow-lg my-2">
+          <div class="relative flex">
+            <!-- Y-Axis Labels -->
+            <div class="w-16 shrink-0 flex flex-col justify-between text-[10px] font-mono text-slate-400 pr-2 border-r border-slate-800/60 select-none py-1">
+              ${chartData.yLabels.map(y => `<span class="truncate">${this.formatCompact(y)}</span>`).join('')}
+            </div>
+
+            <!-- SVG Chart Canvas -->
+            <div class="flex-1 relative overflow-hidden pl-1.5" style="height: 145px;">
+              <!-- Horizontal Gridlines -->
+              <div class="absolute inset-0 flex flex-col justify-between pointer-events-none py-1">
+                <div class="w-full border-b border-slate-800/50"></div>
+                <div class="w-full border-b border-slate-800/50"></div>
+                <div class="w-full border-b border-slate-800/50"></div>
+                <div class="w-full border-b border-slate-800/50"></div>
+              </div>
+
+              <svg viewBox="0 0 ${chartData.svgWidth} ${chartData.svgHeight}" preserveAspectRatio="none" class="w-full h-full relative z-10 overflow-visible">
+                <defs>
+                  <linearGradient id="crypto-chart-grad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.35" />
+                    <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.0" />
+                  </linearGradient>
+                </defs>
+                <path d="${chartData.pathArea}" fill="url(#crypto-chart-grad)" />
+                <path d="${chartData.pathLine}" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                <circle cx="${chartData.lastPoint.x}" cy="${chartData.lastPoint.y}" r="4.5" fill="#60a5fa" class="drop-shadow-md" />
+                <circle cx="${chartData.lastPoint.x}" cy="${chartData.lastPoint.y}" r="8" fill="#3b82f6" opacity="0.3" class="animate-ping" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- X-Axis Timestamps (Sesuai Gambar: 23:49 00:13 00:38 01:02 01:27) -->
+          <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 pl-16 pt-2 border-t border-slate-800/60 mt-1 select-none">
+            ${chartData.xLabels.map(t => `<span>${t}</span>`).join('')}
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- Action Buttons: [ Sell ] and [ Buy more ] (Sesuai Screenshot) -->
+      <div class="grid grid-cols-2 gap-3 my-3">
+        <button onclick="game.setCryptoTradeMode('sell')" class="btn-press py-3 rounded-2xl ${isModeSell ? 'bg-blue-600 text-white font-black shadow-lg shadow-blue-600/30 ring-2 ring-blue-400' : 'bg-slate-800/90 text-slate-300 hover:text-white font-bold border border-slate-700/80'} text-sm transition text-center flex items-center justify-center gap-1.5">
+          <span>Sell</span>
+        </button>
+        <button onclick="game.setCryptoTradeMode('buy')" class="btn-press py-3 rounded-2xl ${!isModeSell ? 'bg-blue-600 text-white font-black shadow-lg shadow-blue-600/30 ring-2 ring-blue-400' : 'bg-slate-800/90 text-slate-300 hover:text-white font-bold border border-slate-700/80'} text-sm transition text-center flex items-center justify-center gap-1.5">
+          <span>Buy more</span>
+        </button>
+      </div>
+
+      <!-- Trade Execution Form -->
+      <div class="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800/90 mb-4 space-y-3">
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-slate-400 font-semibold">${isModeSell ? 'Dompet Kripto Dimiliki:' : 'Saldo Kas Tunai Tersedia:'}</span>
+          <span class="font-black ${isModeSell ? 'text-amber-400' : 'text-emerald-400'} font-mono">
+            ${isModeSell ? userHold.amount.toFixed(4) + ' ' + coin.symbol : this.formatMoney(this.state.cash)}
+          </span>
+        </div>
+
+        <!-- Quick Percent Chips -->
+        <div class="grid grid-cols-4 gap-1.5 text-xs font-bold">
+          <button onclick="game.setCryptoDetailPercent(0.1)" class="btn-press py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">10%</button>
+          <button onclick="game.setCryptoDetailPercent(0.25)" class="btn-press py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">25%</button>
+          <button onclick="game.setCryptoDetailPercent(0.5)" class="btn-press py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">50%</button>
+          <button onclick="game.setCryptoDetailPercent(1.0)" class="btn-press py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 font-black">Max</button>
+        </div>
+
+        <!-- Input Amount -->
+        <div class="relative">
+          <input id="crypto-detail-amount-input" type="number" step="any" min="0" placeholder="Masukkan jumlah koin..." oninput="game.onCryptoDetailAmountChange(this.value)" class="w-full py-2.5 px-3 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono font-bold text-sm focus:border-amber-400 focus:outline-none">
+          <span class="absolute right-3 top-2.5 text-xs text-amber-400 font-mono font-bold pointer-events-none">${coin.symbol}</span>
+        </div>
+
+        <div id="crypto-detail-trade-preview" class="text-xs font-semibold text-slate-300 flex items-center justify-between pt-1 border-t border-slate-800/60">
+          <span>Estimasi Nilai:</span>
+          <span id="crypto-detail-preview-value" class="font-mono font-bold text-white">Rp 0</span>
+        </div>
+
+        <button onclick="game.executeCryptoDetailTrade()" class="btn-press w-full py-3 rounded-xl ${isModeSell ? 'bg-rose-600 hover:bg-rose-500 text-white' : 'bg-amber-400 hover:bg-amber-300 text-slate-950'} font-black text-sm shadow-md transition flex items-center justify-center gap-1.5">
+          <span>${isModeSell ? 'Konfirmasi Penjualan Kripto' : 'Konfirmasi Pembelian Kripto'}</span>
+        </button>
+      </div>
+
+      <!-- Details Section (Sesuai Gambar: Details & Current price of cryptocurrency) -->
+      <div class="space-y-3.5 pt-2 border-t border-slate-800">
+        <h4 class="text-base font-black text-white">Details</h4>
+
+        <div>
+          <div class="text-xs text-slate-400 font-semibold">Current price of cryptocurrency</div>
+          <div class="text-2xl font-black text-white font-mono mt-0.5 tracking-tight">${this.formatMoney(price)}</div>
+          <div class="text-[11px] text-slate-400 font-mono mt-0.5">Volatilitas Pasar: ${(coin.volatility * 100).toFixed(1)}%</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5 pt-1">
+          <div class="p-3 rounded-2xl bg-slate-900 border border-slate-800/90 shadow-sm">
+            <div class="text-sm font-black text-emerald-400 font-mono">${this.formatMoney(Math.max(...history))}</div>
+            <div class="text-[10px] text-slate-400 mt-1">24h Tertinggi</div>
+          </div>
+          <div class="p-3 rounded-2xl bg-slate-900 border border-slate-800/90 shadow-sm">
+            <div class="text-sm font-black text-rose-400 font-mono">${this.formatMoney(Math.min(...history))}</div>
+            <div class="text-[10px] text-slate-400 mt-1">24h Terendah</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    container.innerHTML = html;
+  },
+
+  onCryptoDetailAmountChange(val) {
+    const amount = parseFloat(val) || 0;
+    const price = this.cryptoPrices[this.selectedCryptoSymbol] || 0;
+    const total = Math.round(amount * price);
+    const el = document.getElementById('crypto-detail-preview-value');
+    if (el) {
+      el.innerText = this.formatMoney(total);
+    }
+  },
+
+  setCryptoDetailPercent(pct) {
+    const symbol = this.selectedCryptoSymbol;
+    if (!symbol) return;
+    const price = this.cryptoPrices[symbol] || 1;
+    const isModeSell = this.cryptoTradeMode === 'sell';
+    let amount = 0;
+
+    if (isModeSell) {
+      const userHold = this.state.crypto[symbol] || { amount: 0 };
+      amount = userHold.amount * pct;
+    } else {
+      const maxCash = this.state.cash * pct;
+      amount = maxCash / price;
+    }
+
+    const input = document.getElementById('crypto-detail-amount-input');
+    if (input) {
+      input.value = amount > 0 ? (amount < 1 ? amount.toFixed(4) : amount.toFixed(2)) : '';
+      this.onCryptoDetailAmountChange(input.value);
+    }
+  },
+
+  executeCryptoDetailTrade() {
+    const symbol = this.selectedCryptoSymbol;
+    if (!symbol) return;
+    const input = document.getElementById('crypto-detail-amount-input');
+    const amount = parseFloat(input ? input.value : 0) || 0;
+    if (amount <= 0) {
+      this.showToast('Masukkan jumlah koin yang valid!', 'error');
+      return;
+    }
+
+    if (this.cryptoTradeMode === 'sell') {
+      const userHold = this.state.crypto[symbol] || { amount: 0 };
+      const sellRatio = Math.min(1.0, amount / (userHold.amount || 1));
+      this.sellCrypto(symbol, sellRatio);
+    } else {
+      this.buyCrypto(symbol, amount);
+    }
+
+    // Refresh detail screen
+    this.renderCryptoDetail(symbol);
   },
 
   setPropertyView(view) {
@@ -3621,6 +4238,74 @@ Object.assign(GameEngine.prototype, {
     this.render();
   },
 
+  upgradeResidence() {
+    const curLevel = this.state.residenceLevel || 1;
+    if (typeof RESIDENCE_TIERS === 'undefined') return;
+    if (curLevel >= RESIDENCE_TIERS.length) {
+      this.showToast('Tempat tinggal Anda sudah mencapai level tertinggi!', 'info');
+      return;
+    }
+    const nextTier = RESIDENCE_TIERS[curLevel];
+    if (this.state.cash < nextTier.price) {
+      window.sound.playError();
+      this.showToast(`Uang tunai belum cukup untuk upgrade ke ${nextTier.name}! Butuh ${this.formatMoney(nextTier.price)}`, 'error');
+      return;
+    }
+
+    this.state.cash -= nextTier.price;
+    this.state.residenceLevel = curLevel + 1;
+    window.sound.playUpgrade();
+    this.showToast(`Selamat! Tempat tinggal di-upgrade ke Level ${this.state.residenceLevel}: ${nextTier.name}!`, 'success');
+    this.saveGame();
+    this.render();
+  },
+
+  buyCollectionItem(collKey, itemId) {
+    if (typeof COLLECTIONS_CATALOG === 'undefined' || !COLLECTIONS_CATALOG[collKey]) return;
+    const item = COLLECTIONS_CATALOG[collKey].find(x => x.id === itemId);
+    if (!item) return;
+
+    this.state.collections = this.state.collections || {};
+    this.state.collections[collKey] = this.state.collections[collKey] || [];
+
+    if (this.state.collections[collKey].includes(itemId)) {
+      this.showToast('Barang koleksi ini sudah Anda miliki dalam galeri!', 'info');
+      return;
+    }
+
+    if (this.state.cash < item.price) {
+      window.sound.playError();
+      this.showToast('Uang tunai belum cukup untuk membeli koleksi ini!', 'error');
+      return;
+    }
+
+    this.state.cash -= item.price;
+    this.state.collections[collKey].push(itemId);
+    window.sound.playUpgrade();
+    this.showToast(`Koleksi Baru! ${item.name} berhasil Anda peroleh!`, 'success');
+    this.saveGame();
+    this.render();
+  },
+
+  sellCollectionItem(collKey, itemId) {
+    if (typeof COLLECTIONS_CATALOG === 'undefined' || !COLLECTIONS_CATALOG[collKey]) return;
+    if (!this.state.collections || !Array.isArray(this.state.collections[collKey])) return;
+
+    const idx = this.state.collections[collKey].indexOf(itemId);
+    if (idx === -1) return;
+
+    const item = COLLECTIONS_CATALOG[collKey].find(x => x.id === itemId);
+    if (!item) return;
+
+    const sellPrice = Math.round(item.price * 0.75);
+    this.state.collections[collKey].splice(idx, 1);
+    this.state.cash += sellPrice;
+    window.sound.playCash();
+    this.showToast(`Berhasil melelang ${item.name} seharga ${this.formatCompact(sellPrice)}!`, 'info');
+    this.saveGame();
+    this.render();
+  },
+
   buyStock(symbol, shares) {
     const price = this.stockPrices[symbol];
     if (!price || shares <= 0) return;
@@ -3778,6 +4463,14 @@ Object.assign(GameEngine.prototype, {
       });
     }
 
+    // Update detail view if open
+    if (this.stockView === 'detail' && this.selectedStockSymbol) {
+      this.renderStockDetail(this.selectedStockSymbol);
+    }
+    if (this.cryptoView === 'detail' && this.selectedCryptoSymbol) {
+      this.renderCryptoDetail(this.selectedCryptoSymbol);
+    }
+
     // Cek Likuidasi Posisi Komoditas Aktif (-98% margin loss)
     if (Array.isArray(this.state.commodityPositions) && this.state.commodityPositions.length > 0) {
       let liquidated = 0;
@@ -3800,10 +4493,51 @@ Object.assign(GameEngine.prototype, {
     }
   },
 
+  updateMarketCountdown(secRemaining) {
+    const el = document.getElementById('market-refresh-countdown');
+    if (!el) return;
+    if (secRemaining <= 0) {
+      el.textContent = '⏱️ Memperbarui Harga...';
+    } else {
+      el.textContent = `⏱️ Update Pasar: ${secRemaining}s`;
+    }
+  },
+
+  updateOpenMarketModal() {
+    // 1. Update stock modal if open
+    const stockModal = document.getElementById('stock-modal');
+    if (stockModal && !stockModal.classList.contains('hidden') && this.stockDetailSymbol) {
+      const price = this.stockPrices[this.stockDetailSymbol];
+      const priceEl = document.getElementById('stock-modal-price');
+      if (priceEl) priceEl.innerText = this.formatMoney(price);
+      if (typeof this.calculateStockBuy === 'function') this.calculateStockBuy();
+    }
+
+    // 2. Update crypto modal if open
+    const cryptoModal = document.getElementById('crypto-modal');
+    if (cryptoModal && !cryptoModal.classList.contains('hidden') && this.cryptoDetailSymbol) {
+      const price = this.cryptoPrices[this.cryptoDetailSymbol];
+      const priceEl = document.getElementById('crypto-modal-price');
+      if (priceEl) priceEl.innerText = this.formatMoney(price);
+      if (typeof this.calculateCryptoBuy === 'function') this.calculateCryptoBuy();
+    }
+
+    // 3. Update commodity modal if open
+    const commModal = document.getElementById('commodity-modal');
+    if (commModal && !commModal.classList.contains('hidden') && this.commodityDetailSymbol) {
+      const price = this.commodityPrices[this.commodityDetailSymbol];
+      const priceEl = document.getElementById('commodity-modal-price');
+      if (priceEl) priceEl.innerText = this.formatMoney(price);
+      if (typeof this.updateCommodityOrderSummary === 'function') this.updateCommodityOrderSummary();
+    }
+  },
+
   // ------------------------------------------
   // TRADING SAHAM DENGAN INPUT CUSTOM
   // ------------------------------------------
   openStockModal(symbol) {
+    this.openStockDetail(symbol);
+    return;
     this.stockDetailSymbol = symbol;
     const stock = STOCKS_CATALOG.find(x => x.symbol === symbol);
     const userHold = this.state.stocks[symbol] || { shares: 0, totalCost: 0 };
@@ -3920,6 +4654,8 @@ Object.assign(GameEngine.prototype, {
   // TRADING KRIPTO DENGAN INPUT CUSTOM
   // ------------------------------------------
   openCryptoModal(symbol) {
+    this.openCryptoDetail(symbol);
+    return;
     this.cryptoDetailSymbol = symbol;
     const coin = CRYPTO_CATALOG.find(x => x.symbol === symbol);
     const userHold = this.state.crypto[symbol] || { amount: 0, totalCost: 0 };
@@ -4572,29 +5308,29 @@ Object.assign(GameEngine.prototype, {
             <img src="${sector.image}" alt="${biz.name}" class="w-full h-full object-cover hover:scale-105 transition duration-500" onerror="this.style.display='none'">
             <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
             
-            <div class="absolute top-2 left-2 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-[11px] font-semibold text-slate-300">
-              <span class="text-sm">${sector.icon}</span>
-              <span>${sector.name}</span>
+            <div class="absolute top-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-[10px] font-semibold text-slate-300 max-w-[150px] truncate">
+              <span class="text-xs">${sector.icon}</span>
+              <span class="truncate">${sector.name}</span>
             </div>
 
             <div class="absolute top-2 right-2">
               ${isBizSuspended ? `
-                <span class="text-xs px-2.5 py-0.5 rounded-full bg-rose-500 text-slate-950 font-black shadow-md shadow-rose-500/20 text-[11px] tax-warning-pulse">
+                <span class="px-2 py-0.5 rounded-full bg-rose-500 text-slate-950 font-black shadow-md shadow-rose-500/20 text-[10px] tax-warning-pulse whitespace-nowrap">
                   ⚠️ Dibekukan DJP
                 </span>
               ` : `
-                <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-black shadow-md shadow-emerald-500/20 text-[11px]">
-                  Aktif Beroperasi
+                <span class="px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-black shadow-md shadow-emerald-500/20 text-[10px] whitespace-nowrap">
+                  Aktif
                 </span>
               `}
             </div>
 
-            <div class="absolute bottom-2 left-3 right-3 flex items-end justify-between">
-              <div>
-                <h3 class="font-black text-white text-base leading-tight drop-shadow-md">${biz.name}</h3>
-                <span class="text-[11px] text-slate-300 font-medium">${statusInfo}</span>
+            <div class="absolute bottom-2 left-3 right-3 flex items-end justify-between gap-2">
+              <div class="min-w-0 flex-1 pr-1">
+                <h3 class="font-black text-white text-sm sm:text-base leading-tight drop-shadow-md truncate">${biz.name}</h3>
+                <span class="text-[10px] text-slate-300 font-medium truncate block">${statusInfo}</span>
               </div>
-              <span class="text-xs font-black ${isBizSuspended ? 'text-rose-400 border-rose-500/50' : (rawRev < 0 ? 'text-rose-400 border-slate-800' : 'text-emerald-400 border-slate-800')} bg-slate-950/90 px-2 py-0.5 rounded-lg border">
+              <span class="text-[11px] font-black shrink-0 ${isBizSuspended ? 'text-rose-400 border-rose-500/50' : (rawRev < 0 ? 'text-rose-400 border-slate-800' : 'text-emerald-400 border-slate-800')} bg-slate-950/90 px-2 py-0.5 rounded-lg border whitespace-nowrap">
                 ${revText}
               </span>
             </div>
@@ -4900,8 +5636,7 @@ Object.assign(GameEngine.prototype, {
               <div class="h-full ${kmPercent > 80 ? 'bg-amber-400' : 'bg-emerald-400'} transition-all" style="width: ${kmPercent}%"></div>
             </div>
 
-            <div class="flex justify-between items-center pt-1 border-t border-slate-800/60 text-xs">
-              <span class="text-[10px] text-slate-400">⚠️ Otomatis pensiun saat mencapai ${cat.maxKm.toLocaleString()} KM</span>
+            <div class="flex justify-end items-center pt-1 border-t border-slate-800/60 text-xs">
               <button onclick="game.sellTaxiVehicle('${biz.instanceId}', '${v.id}')" class="btn-press px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-rose-900/40 text-slate-300 hover:text-rose-300 border border-slate-700 text-[11px] font-bold">
                 Jual Bekas (${this.formatCompact(scrapVal)})
               </button>
@@ -5103,8 +5838,7 @@ Object.assign(GameEngine.prototype, {
               <div class="h-full ${kmPercent > 80 ? 'bg-amber-400' : 'bg-emerald-400'} transition-all" style="width: ${kmPercent}%"></div>
             </div>
 
-            <div class="flex justify-between items-center pt-1 border-t border-slate-800/60 text-xs">
-              <span class="text-[10px] text-slate-400">⚠️ Pensiun otomatis pada ${cat.maxKm.toLocaleString()} KM</span>
+            <div class="flex justify-end items-center pt-1 border-t border-slate-800/60 text-xs">
               <button onclick="game.sellLogisticsTruck('${biz.instanceId}', '${t.id}')" class="btn-press px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-rose-900/40 text-slate-300 hover:text-rose-300 border border-slate-700 text-[11px] font-bold">
                 Jual Truk Bekas (${this.formatCompact(scrapVal)})
               </button>
@@ -6119,20 +6853,20 @@ Object.assign(GameEngine.prototype, {
 
             return `
               <div class="glass-panel p-3.5 rounded-2xl border ${isOperating ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-rose-500/40 bg-rose-500/5'} space-y-2.5 transition">
-                <div class="flex items-start justify-between gap-2">
-                  <div class="flex items-center gap-2.5">
-                    <span class="text-3xl">${route.flag}</span>
-                    <div>
-                      <div class="flex items-center gap-1.5">
-                        <h5 class="font-black text-white text-xs">${idx + 1}. ${route.destination}</h5>
-                        <span class="text-[9px] px-2 py-0.5 rounded-full font-black ${isOperating ? 'bg-emerald-500 text-slate-950' : 'bg-rose-500 text-white'}">
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                  <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                    <span class="text-2xl sm:text-3xl shrink-0">${route.flag}</span>
+                    <div class="min-w-0 flex-1">
+                      <div class="flex flex-wrap items-center gap-1.5">
+                        <h5 class="font-black text-white text-xs truncate">${idx + 1}. ${route.destination}</h5>
+                        <span class="text-[9px] px-1.5 py-0.5 rounded-full font-black shrink-0 ${isOperating ? 'bg-emerald-500 text-slate-950' : 'bg-rose-500 text-white'}">
                           ${isOperating ? '🟢 Mengudara' : (isGrounded ? '🔴 Grounded' : '⚠️ Tanpa Pesawat')}
                         </span>
                       </div>
-                      <div class="text-[10px] text-slate-400">Jarak: ${route.distanceKm.toLocaleString('id-ID')} km • CGK ⇄ ${route.destination.split('(')[1]?.split(')')[0] || 'DEST'}</div>
+                      <div class="text-[10px] text-slate-400 truncate">Jarak: ${route.distanceKm.toLocaleString('id-ID')} km • CGK ⇄ ${route.destination.split('(')[1]?.split(')')[0] || 'DEST'}</div>
                     </div>
                   </div>
-                  <div class="text-right">
+                  <div class="flex items-center justify-between sm:flex-col sm:items-end border-t border-slate-800/60 sm:border-0 pt-1.5 sm:pt-0">
                     <div class="text-xs font-mono font-black ${isOperating ? 'text-emerald-400' : 'text-rose-400'}">
                       ${isOperating ? '+' + this.formatMoney(route.hourlyRevenue) + '/jam' : 'Rp 0/jam'}
                     </div>
@@ -7137,6 +7871,21 @@ Object.assign(GameEngine.prototype, {
         </div>
       </div>
 
+      <!-- Opsi Jual Bisnis (30% Valuasi Pasar) -->
+      <div class="p-3 rounded-2xl bg-slate-900/90 border border-rose-500/30 flex items-center justify-between gap-2.5 mb-3">
+        <div class="min-w-0 flex-1">
+          <div class="text-xs font-bold text-white flex items-center gap-1.5">
+            <span>🏷️ Jual & Likuidasi Bisnis</span>
+          </div>
+          <div class="text-[10px] text-slate-400 mt-0.5 leading-snug">
+            Cairkan dana <strong class="text-amber-300 font-bold">30%</strong> dari kapitalisasi pasar (<strong class="text-emerald-400 font-mono font-bold">${this.formatMoney(Math.round(bizValuation * 0.3))}</strong>).
+          </div>
+        </div>
+        <button onclick="game.sellBusiness('${biz.instanceId}')" class="btn-press px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shrink-0 flex items-center gap-1 shadow-md shadow-rose-600/20">
+          <span>Jual Bisnis</span>
+        </button>
+      </div>
+
       <!-- Pajak Status Bisnis jika ada tunggakan -->
       ${bizTax.unpaid > 0 ? `
         <div class="p-3 rounded-2xl ${bizTax.suspended ? 'bg-rose-500/10 border border-rose-500 text-rose-300' : 'bg-amber-500/10 border border-amber-500/40 text-amber-300'} mb-3 space-y-2 shadow-md">
@@ -7192,7 +7941,7 @@ Object.assign(GameEngine.prototype, {
               <span class="text-[10px] px-2 py-0.5 rounded bg-rose-500 text-slate-950 font-black">SANKSI DJP</span>
             </div>
             <p class="text-[11px] text-slate-300">
-              Anda memiliki tunggakan pajak dividen saham sebesar <strong class="text-rose-400">${this.formatMoney(taxStock.unpaid)}</strong> yang telah melewati batas 1 jam dunia nyata. Seluruh pencairan dividen saham dibekukan (Rp 0/jam) sampai pajak dilunasi!
+              Anda memiliki tunggakan pajak dividen saham sebesar <strong class="text-rose-400">${this.formatMoney(taxStock.unpaid)}</strong> yang telah melewati batas 72 jam dunia nyata. Seluruh pencairan dividen saham dibekukan (Rp 0/jam) sampai pajak dilunasi!
             </p>
             <button onclick="game.payTax('stocks')" class="btn-press w-full py-2 rounded-xl bg-rose-500 hover:bg-rose-400 text-slate-950 font-black text-xs shadow-md shadow-rose-500/20 flex items-center justify-center gap-1.5">
               <span>💳 Lunasi Pajak Dividen Saham Sekarang (${this.formatMoney(taxStock.unpaid)})</span>
@@ -7350,8 +8099,8 @@ Object.assign(GameEngine.prototype, {
                   <button onclick="game.sellStock('${stock.symbol}', Math.max(1, Math.floor(${userHold.shares} * 0.25)))" class="btn-press flex-1 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold">
                     Jual 25%
                   </button>
-                  <button onclick="game.openStockModal('${stock.symbol}')" class="btn-press flex-1 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center justify-center gap-1">
-                    <span>Trading 📊</span>
+                  <button onclick="event.stopPropagation(); game.openStockDetail('${stock.symbol}')" class="btn-press flex-1 py-1.5 rounded-xl bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-500/40 text-xs font-bold flex items-center justify-center gap-1 shadow-sm">
+                    <span>Detail & Trading 📊</span>
                   </button>
                 </div>
               </div>
@@ -7381,7 +8130,7 @@ Object.assign(GameEngine.prototype, {
           const sparklineSvg = this.generateSparkline(history, isUp ? '#00e676' : '#ff3366');
 
           html += `
-            <div class="glass-panel p-3.5 rounded-2xl border border-slate-800/80 mb-3 card-transition">
+            <div class="glass-panel p-3.5 rounded-2xl border border-slate-800/80 mb-3 card-transition cursor-pointer hover:border-blue-500/50" onclick="game.openStockDetail('${stock.symbol}')">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2.5">
                   <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-lg">
@@ -7420,8 +8169,8 @@ Object.assign(GameEngine.prototype, {
                   <div class="text-[11px] text-emerald-400/80 mt-0.5">Dividen: +${(stock.dividendYieldHourly * 100).toFixed(2)}%/jam</div>
                 </div>
 
-                <button onclick="game.openStockModal('${stock.symbol}')" class="btn-press px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs">
-                  Beli / Jual 📊
+                <button onclick="event.stopPropagation(); game.openStockDetail('${stock.symbol}')" class="btn-press px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-sm">
+                  Detail & Trade 📊
                 </button>
               </div>
             </div>
@@ -7519,8 +8268,8 @@ Object.assign(GameEngine.prototype, {
               <div class="glass-panel p-3.5 rounded-2xl border border-slate-800/80 mb-3 card-transition shadow-sm">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2.5">
-                    <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-lg font-bold" style="color: ${coin.color}">
-                      ${coin.icon}
+                    <div class="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center shrink-0 shadow-md bg-slate-900 border border-amber-500/30">
+                      <img src="${coin.logo || 'images/crypto_bitcoin.svg'}" alt="${coin.name}" class="w-full h-full object-contain">
                     </div>
                     <div>
                       <div class="flex items-center gap-1.5">
@@ -7567,8 +8316,8 @@ Object.assign(GameEngine.prototype, {
                   <button onclick="game.sellCrypto('${coin.symbol}', 1.0)" class="btn-press flex-1 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-bold">
                     Jual 100%
                   </button>
-                  <button onclick="game.openCryptoModal('${coin.symbol}')" class="btn-press flex-1 py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 border border-amber-400/40 text-xs font-bold flex items-center justify-center gap-1">
-                    <span>Trading ⚡</span>
+                  <button onclick="event.stopPropagation(); game.openCryptoDetail('${coin.symbol}')" class="btn-press flex-1 py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 border border-amber-400/40 text-xs font-bold flex items-center justify-center gap-1 shadow-sm">
+                    <span>Detail & Trading ⚡</span>
                   </button>
                 </div>
               </div>
@@ -7598,7 +8347,7 @@ Object.assign(GameEngine.prototype, {
           const sparklineSvg = this.generateSparkline(history, isUp ? '#00e676' : '#ff3366');
 
           html += `
-            <div class="glass-panel p-3.5 rounded-2xl border border-slate-800/80 mb-3 card-transition">
+            <div class="glass-panel p-3.5 rounded-2xl border border-slate-800/80 mb-3 card-transition cursor-pointer hover:border-amber-500/50" onclick="game.openCryptoDetail('${coin.symbol}')">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2.5">
                   <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-lg font-bold" style="color: ${coin.color}">
@@ -7636,8 +8385,8 @@ Object.assign(GameEngine.prototype, {
                   ` : ''}
                 </div>
 
-                <button onclick="game.openCryptoModal('${coin.symbol}')" class="btn-press px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs">
-                  Beli / Jual ⚡
+                <button onclick="event.stopPropagation(); game.openCryptoDetail('${coin.symbol}')" class="btn-press px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-sm">
+                  Detail & Trade ⚡
                 </button>
               </div>
             </div>
@@ -7877,7 +8626,7 @@ Object.assign(GameEngine.prototype, {
               <span class="text-[10px] px-2 py-0.5 rounded bg-rose-500 text-slate-950 font-black">SANKSI DJP</span>
             </div>
             <p class="text-[11px] text-slate-300">
-              Anda memiliki tunggakan pajak sewa properti sebesar <strong class="text-rose-400">${this.formatMoney(taxProp.unpaid)}</strong> yang telah melewati batas 1 jam dunia nyata. Seluruh pendapatan sewa dibekukan (Rp 0/jam) sampai pajak dilunasi!
+              Anda memiliki tunggakan pajak sewa properti sebesar <strong class="text-rose-400">${this.formatMoney(taxProp.unpaid)}</strong> yang telah melewati batas 72 jam dunia nyata. Seluruh pendapatan sewa dibekukan (Rp 0/jam) sampai pajak dilunasi!
             </p>
             <button onclick="game.payTax('property')" class="btn-press w-full py-2 rounded-xl bg-rose-500 hover:bg-rose-400 text-slate-950 font-black text-xs shadow-md shadow-rose-500/20 flex items-center justify-center gap-1.5">
               <span>💳 Lunasi Pajak Sewa Properti Sekarang (${this.formatMoney(taxProp.unpaid)})</span>
@@ -8207,124 +8956,352 @@ Object.assign(GameEngine.prototype, {
   },
 
   renderLuxury() {
-    const ownedContainer = document.getElementById('luxury-owned-container');
-    const catalogContainer = document.getElementById('luxury-catalog-container');
-    const summaryCard = document.getElementById('luxury-summary-card');
-    const countBadge = document.getElementById('luxury-owned-count');
+    const dashboardView = document.getElementById('luxury-view-dashboard');
+    const subView = document.getElementById('luxury-view-sub');
+    if (!dashboardView || !subView) return;
 
-    // Filter categories buttons helper
-    const renderFilterButtons = (currentFilter, isCatalog = false) => `
-      <div class="flex items-center gap-1.5 mb-3 overflow-x-auto pb-1.5">
-        <button onclick="game.setLuxuryFilter('all')" class="px-2.5 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition ${currentFilter === 'all' ? 'bg-amber-400 text-slate-950 font-black' : 'bg-slate-800 text-slate-400 hover:text-white'}">
-          Semua
+    if (this.luxurySubView) {
+      dashboardView.classList.add('hidden');
+      subView.classList.remove('hidden');
+      this.renderLuxurySubView();
+    } else {
+      dashboardView.classList.remove('hidden');
+      subView.classList.add('hidden');
+      this.renderLuxuryDashboard();
+    }
+  },
+
+  setLuxuryView(view) {
+    if (view === 'catalog') {
+      this.openLuxuryShop('car');
+    } else {
+      this.closeLuxurySubView();
+    }
+  },
+
+  setLuxuryFilter(filter) {
+    this.luxuryFilter = filter;
+    this.renderLuxury();
+  },
+
+  openLuxuryFacility(facility) {
+    this.luxurySubView = { type: 'facility', facility };
+    this.renderLuxury();
+  },
+
+  openLuxuryShop(shopType) {
+    this.luxurySubView = { type: 'shop', shopType };
+    this.renderLuxury();
+  },
+
+  openLuxuryResidence() {
+    this.luxurySubView = { type: 'residence' };
+    this.renderLuxury();
+  },
+
+  openLuxuryCollection(collKey) {
+    this.luxurySubView = { type: 'collection', collKey };
+    this.renderLuxury();
+  },
+
+  closeLuxurySubView() {
+    this.luxurySubView = null;
+    this.renderLuxury();
+  },
+
+  renderLuxuryDashboard() {
+    const container = document.getElementById('luxury-view-dashboard');
+    if (!container) return;
+
+    const owned = (this.state.luxury || []).map(id => LUXURY_CATALOG.find(x => x.id === id)).filter(Boolean);
+    const garageCount = owned.filter(x => x.type === 'car' || x.type === 'moto').length;
+    const hangarCount = owned.filter(x => x.type === 'flight').length;
+    const harborCount = owned.filter(x => x.type === 'yacht').length;
+    const islandCount = owned.filter(x => x.type === 'island').length;
+
+    const resLevel = this.state.residenceLevel || 1;
+    const resTier = (typeof RESIDENCE_TIERS !== 'undefined' && RESIDENCE_TIERS[resLevel - 1]) || { name: 'Studio Penthouse', price: 2500000000, prestige: 100 };
+
+    const colls = this.state.collections || {};
+    const coinsCount = (colls.coins || []).length;
+    const paintingsCount = (colls.paintings || []).length;
+    const uniqueCount = (colls.unique || []).length;
+    const retroCount = (colls.retro_cars || []).length;
+    const jewelsCount = (colls.jewels || []).length;
+    const stampsCount = (colls.stamps || []).length;
+
+    // Calculate total prestige from all luxury & collections & residence
+    let totalPrestige = resTier.prestige || 0;
+    owned.forEach(x => totalPrestige += (x.prestige || 0));
+    if (typeof COLLECTIONS_CATALOG !== 'undefined') {
+      Object.entries(colls).forEach(([k, arr]) => {
+        if (Array.isArray(arr) && COLLECTIONS_CATALOG[k]) {
+          arr.forEach(itemId => {
+            const it = COLLECTIONS_CATALOG[k].find(x => x.id === itemId);
+            if (it) totalPrestige += (it.prestige || 0);
+          });
+        }
+      });
+    }
+
+    container.innerHTML = `
+      <!-- 1. Header -->
+      <div class="flex items-center justify-between pt-1">
+        <h1 class="text-2xl font-black text-white tracking-tight">Items</h1>
+        <div class="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-[11px] font-bold text-amber-400">
+          ⭐ ${totalPrestige.toLocaleString()} Prestise
+        </div>
+      </div>
+
+      <!-- 2. Facilities Row (Garage, Hangar, Harbor, Island) -->
+      <div class="grid grid-cols-4 gap-2">
+        <!-- Garage -->
+        <div onclick="game.openLuxuryFacility('garage')" class="btn-press group relative h-28 rounded-2xl overflow-hidden cursor-pointer shadow-lg border border-slate-800 bg-slate-900 hover:border-slate-600 transition">
+          <img src="images/facility_garage.jpg" alt="Garage" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+          <div class="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/30 to-black/20 flex flex-col justify-end p-1.5 text-center">
+            <div class="text-xs font-black text-white drop-shadow">Garage</div>
+            <div class="text-[9px] text-slate-300 font-bold mt-0.5">${garageCount} aset</div>
+          </div>
+        </div>
+
+        <!-- Hangar -->
+        <div onclick="game.openLuxuryFacility('hangar')" class="btn-press group relative h-28 rounded-2xl overflow-hidden cursor-pointer shadow-lg border border-slate-800 bg-slate-900 hover:border-slate-600 transition">
+          <img src="images/facility_hangar.jpg" alt="Hangar" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+          <div class="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/30 to-black/20 flex flex-col justify-end p-1.5 text-center">
+            <div class="text-xs font-black text-white drop-shadow">Hangar</div>
+            <div class="text-[9px] text-slate-300 font-bold mt-0.5">${hangarCount} aset</div>
+          </div>
+        </div>
+
+        <!-- Harbor -->
+        <div onclick="game.openLuxuryFacility('harbor')" class="btn-press group relative h-28 rounded-2xl overflow-hidden cursor-pointer shadow-lg border border-slate-800 bg-slate-900 hover:border-slate-600 transition">
+          <img src="images/facility_harbor.jpg" alt="Harbor" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+          <div class="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/30 to-black/20 flex flex-col justify-end p-1.5 text-center">
+            <div class="text-xs font-black text-white drop-shadow">Harbor</div>
+            <div class="text-[9px] text-slate-300 font-bold mt-0.5">${harborCount} aset</div>
+          </div>
+        </div>
+
+        <!-- Island (Pulau Pribadi) -->
+        <div onclick="game.openLuxuryFacility('island')" class="btn-press group relative h-28 rounded-2xl overflow-hidden cursor-pointer shadow-lg border border-teal-500/40 bg-slate-900 hover:border-teal-400 transition">
+          <img src="images/facility_island.jpg" alt="Island" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+          <div class="absolute inset-0 bg-gradient-to-t from-teal-950/95 via-teal-950/30 to-black/20 flex flex-col justify-end p-1.5 text-center">
+            <div class="text-xs font-black text-white drop-shadow">Island</div>
+            <div class="text-[9px] text-teal-200 font-bold mt-0.5">${islandCount} pulau</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Showrooms Row (Car Showroom, Aircraft Shop, Yacht Shop, Island Shop) -->
+      <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-1.5 flex gap-1 shadow-md">
+        <button onclick="game.openLuxuryShop('car')" class="btn-press flex-1 py-2 px-0.5 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-slate-800 text-slate-300 transition">
+          <svg class="w-6 h-6 text-slate-300 stroke-[1.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M3 9l1-4h16l1 4M3 9v11a1 1 0 001 1h16a1 1 0 001-1V9M3 9h18M8 14h.01M16 14h.01M9 18h6"/>
+          </svg>
+          <span class="text-[10px] font-bold text-center leading-tight">Car Showroom</span>
         </button>
-        <button onclick="game.setLuxuryFilter('moto')" class="px-2.5 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition ${currentFilter === 'moto' ? 'bg-amber-400 text-slate-950 font-black' : 'bg-slate-800 text-slate-400 hover:text-white'}">
-          🛵 Motor
+
+        <button onclick="game.openLuxuryShop('flight')" class="btn-press flex-1 py-2 px-0.5 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-slate-800 text-slate-300 transition">
+          <svg class="w-6 h-6 text-slate-300 stroke-[1.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M3 21h18M4 18V8l8-5 8 5v10M12 7v10M8 12l4 3 4-3"/>
+          </svg>
+          <span class="text-[10px] font-bold text-center leading-tight">Aircraft Shop</span>
         </button>
-        <button onclick="game.setLuxuryFilter('car')" class="px-2.5 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition ${currentFilter === 'car' ? 'bg-amber-400 text-slate-950 font-black' : 'bg-slate-800 text-slate-400 hover:text-white'}">
-          🚗 Mobil
+
+        <button onclick="game.openLuxuryShop('yacht')" class="btn-press flex-1 py-2 px-0.5 rounded-xl flex flex-col items-center justify-center gap-1 bg-blue-600/30 text-blue-200 border border-blue-500/40 hover:bg-blue-600/40 transition">
+          <svg class="w-6 h-6 text-blue-300 stroke-[1.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M2 17l20 2-4-8-7-6-1 7-4 5zM4 21c3-1 6-1 8 0 3-1 6-1 8 0"/>
+          </svg>
+          <span class="text-[10px] font-bold text-center leading-tight">Yacht Shop</span>
         </button>
-        <button onclick="game.setLuxuryFilter('watch')" class="px-2.5 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition ${currentFilter === 'watch' ? 'bg-amber-400 text-slate-950 font-black' : 'bg-slate-800 text-slate-400 hover:text-white'}">
-          ⌚ Jam Tangan
+
+        <button onclick="game.openLuxuryShop('island')" class="btn-press flex-1 py-2 px-0.5 rounded-xl flex flex-col items-center justify-center gap-1 bg-teal-600/20 text-teal-200 border border-teal-500/30 hover:bg-teal-600/40 transition">
+          <div class="text-xl leading-none">🏝️</div>
+          <span class="text-[10px] font-bold text-center leading-tight">Island Shop</span>
         </button>
-        <button onclick="game.setLuxuryFilter('mansion')" class="px-2.5 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition ${currentFilter === 'mansion' ? 'bg-amber-400 text-slate-950 font-black' : 'bg-slate-800 text-slate-400 hover:text-white'}">
-          🏰 Mansion
+      </div>
+
+      <!-- 4. Residence (Split Card: Mansion on Left, Teal Status Box on Right) -->
+      <div onclick="game.openLuxuryResidence()" class="btn-press group relative rounded-2xl overflow-hidden border border-teal-500/30 shadow-xl cursor-pointer hover:border-teal-400/60 transition flex flex-row h-36">
+        <!-- Left: Mansion Photo -->
+        <div class="w-[44%] relative overflow-hidden bg-slate-900">
+          <img src="images/residence_mansion.jpg" alt="Residence" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+        </div>
+
+        <!-- Right: Teal Gradient Box -->
+        <div class="w-[56%] bg-gradient-to-br from-[#0e5c74] via-[#0b4d63] to-[#043344] p-3 flex flex-col justify-between text-white">
+          <div class="text-center font-bold text-teal-100 text-xs tracking-wider">
+            Residence
+          </div>
+
+          <!-- Milestones Row -->
+          <div class="space-y-1">
+            <div class="flex items-center justify-around text-xs">
+              <span title="Gold Tier" class="${resLevel >= 1 ? 'opacity-100 scale-110' : 'opacity-40'} transition">🧱</span>
+              <span title="Silver Tier" class="${resLevel >= 4 ? 'opacity-100 scale-110' : 'opacity-40'} transition">🏛️</span>
+              <span title="Diamond Tier" class="${resLevel >= 7 ? 'opacity-100 scale-110' : 'opacity-40'} transition">💎</span>
+            </div>
+            <div class="grid grid-cols-3 gap-1">
+              <div class="h-1 rounded-full ${resLevel >= 1 ? 'bg-amber-400' : 'bg-teal-900/60'}"></div>
+              <div class="h-1 rounded-full ${resLevel >= 4 ? 'bg-slate-200' : 'bg-teal-900/60'}"></div>
+              <div class="h-1 rounded-full ${resLevel >= 7 ? 'bg-cyan-400' : 'bg-teal-900/60'}"></div>
+            </div>
+          </div>
+
+          <!-- Level & Valuation -->
+          <div class="text-center space-y-0.5">
+            <div class="text-sm font-black text-teal-200 flex items-center justify-center gap-1">
+              <span class="text-base font-bold">⇧</span>
+              <span>${resLevel}</span>
+            </div>
+            <div class="text-base font-black text-white tracking-tight drop-shadow">
+              ${this.formatCompact(resTier.price)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Collections (2-Column Grid of 6 Categories) -->
+      <div class="space-y-2 pt-1">
+        <div class="flex items-center justify-between">
+          <h2 class="text-base font-black text-white">Collections</h2>
+          <span class="text-[11px] text-slate-400 font-semibold">${coinsCount + paintingsCount + uniqueCount + retroCount + jewelsCount + stampsCount} of 105 total</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <!-- Coins -->
+          <div onclick="game.openLuxuryCollection('coins')" class="btn-press group bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition shadow-md">
+            <div class="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center text-4xl mb-2 group-hover:scale-110 transition-transform">
+              🪙
+            </div>
+            <div class="font-bold text-white text-sm">Coins</div>
+            <div class="text-xs text-slate-400 font-medium mt-0.5">${coinsCount} of 20</div>
+          </div>
+
+          <!-- Paintings -->
+          <div onclick="game.openLuxuryCollection('paintings')" class="btn-press group bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition shadow-md">
+            <div class="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center text-4xl mb-2 group-hover:scale-110 transition-transform">
+              🎨
+            </div>
+            <div class="font-bold text-white text-sm">Paintings</div>
+            <div class="text-xs text-slate-400 font-medium mt-0.5">${paintingsCount} of 25</div>
+          </div>
+
+          <!-- Unique items -->
+          <div onclick="game.openLuxuryCollection('unique')" class="btn-press group bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition shadow-md">
+            <div class="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center text-4xl mb-2 group-hover:scale-110 transition-transform">
+              🔮
+            </div>
+            <div class="font-bold text-white text-sm">Unique items</div>
+            <div class="text-xs text-slate-400 font-medium mt-0.5">${uniqueCount} of 5</div>
+          </div>
+
+          <!-- Retro cars -->
+          <div onclick="game.openLuxuryCollection('retro_cars')" class="btn-press group bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition shadow-md">
+            <div class="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center text-4xl mb-2 group-hover:scale-110 transition-transform">
+              🚗
+            </div>
+            <div class="font-bold text-white text-sm">Retro cars</div>
+            <div class="text-xs text-slate-400 font-medium mt-0.5">${retroCount} of 20</div>
+          </div>
+
+          <!-- Jewels -->
+          <div onclick="game.openLuxuryCollection('jewels')" class="btn-press group bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition shadow-md">
+            <div class="w-16 h-16 rounded-2xl bg-yellow-500/10 flex items-center justify-center text-4xl mb-2 group-hover:scale-110 transition-transform">
+              👑
+            </div>
+            <div class="font-bold text-white text-sm">Jewels</div>
+            <div class="text-xs text-slate-400 font-medium mt-0.5">${jewelsCount} of 20</div>
+          </div>
+
+          <!-- Stamps -->
+          <div onclick="game.openLuxuryCollection('stamps')" class="btn-press group bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition shadow-md">
+            <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-4xl mb-2 group-hover:scale-110 transition-transform">
+              📮
+            </div>
+            <div class="font-bold text-white text-sm">Stamps</div>
+            <div class="text-xs text-slate-400 font-medium mt-0.5">${stampsCount} of 15</div>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  renderLuxurySubView() {
+    const container = document.getElementById('luxury-view-sub');
+    if (!container || !this.luxurySubView) return;
+
+    const sub = this.luxurySubView;
+
+    // Header Back Button template
+    const renderSubHeader = (title, subtitle = '') => `
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <button onclick="game.closeLuxurySubView()" class="btn-press px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          <span>Items</span>
         </button>
-        <button onclick="game.setLuxuryFilter('flight')" class="px-2.5 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition ${currentFilter === 'flight' ? 'bg-amber-400 text-slate-950 font-black' : 'bg-slate-800 text-slate-400 hover:text-white'}">
-          ✈️ Jet & Heli
-        </button>
-        <button onclick="game.setLuxuryFilter('yacht')" class="px-2.5 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition ${currentFilter === 'yacht' ? 'bg-amber-400 text-slate-950 font-black' : 'bg-slate-800 text-slate-400 hover:text-white'}">
-          🛥️ Yacht
-        </button>
-        <button onclick="game.setLuxuryFilter('island')" class="px-2.5 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition ${currentFilter === 'island' ? 'bg-amber-400 text-slate-950 font-black' : 'bg-slate-800 text-slate-400 hover:text-white'}">
-          🏝️ Pulau Pribadi
-        </button>
+        <div class="text-right">
+          <h2 class="text-sm font-black text-white">${title}</h2>
+          ${subtitle ? `<div class="text-[10px] text-amber-400 font-semibold">${subtitle}</div>` : ''}
+        </div>
       </div>
     `;
 
-    // 1. Calculate Owned Totals
-    let totalValuation = 0;
-    let totalPrestige = 0;
-    const ownedItems = [];
-    (this.state.luxury || []).forEach(id => {
-      const item = LUXURY_CATALOG.find(x => x.id === id);
-      if (item) {
-        totalValuation += item.price;
-        totalPrestige += item.prestige;
-        ownedItems.push(item);
-      }
-    });
+    // 1. Facility Sub-View
+    if (sub.type === 'facility') {
+      const facilityTitles = {
+        garage: 'Garage (Garasi Mobil & Motor)',
+        hangar: 'Hangar (Armada Pesawat & Heli)',
+        harbor: 'Harbor (Dermaga Yacht & Superyacht)',
+        island: 'Island Sanctuary (Koleksi Pulau Pribadi)'
+      };
+      const title = facilityTitles[sub.facility] || 'Facility';
 
-    if (countBadge) {
-      countBadge.innerText = `${ownedItems.length} Aset Dimiliki`;
-    }
+      const filterType = lux => {
+        if (sub.facility === 'garage') return lux.type === 'car' || lux.type === 'moto';
+        if (sub.facility === 'hangar') return lux.type === 'flight';
+        if (sub.facility === 'harbor') return lux.type === 'yacht';
+        if (sub.facility === 'island') return lux.type === 'island';
+        return true;
+      };
 
-    if (summaryCard) {
-      summaryCard.innerHTML = `
-        <div class="flex items-center justify-between">
-          <div>
-            <div class="text-[11px] text-slate-400 uppercase tracking-wider font-bold">Total Valuasi Koleksi</div>
-            <div class="text-lg font-black text-white">${this.formatMoney(totalValuation)}</div>
-          </div>
-          <div class="text-right">
-            <div class="text-[11px] text-amber-400 font-bold">Poin Prestise</div>
-            <div class="text-base font-black text-amber-300">⭐ +${totalPrestige.toLocaleString()}</div>
-          </div>
-        </div>
-      `;
-    }
+      const shopMapping = { garage: 'car', hangar: 'flight', harbor: 'yacht', island: 'island' };
+      const targetShop = shopMapping[sub.facility] || 'car';
 
-    // 2. Render Owned View
-    if (ownedContainer) {
-      const filteredOwned = ownedItems.filter(lux => {
-        if (this.luxuryFilter === 'all') return true;
-        return lux.type === this.luxuryFilter;
-      });
+      const owned = (this.state.luxury || []).map(id => LUXURY_CATALOG.find(x => x.id === id)).filter(Boolean).filter(filterType);
 
-      let ownedHtml = renderFilterButtons(this.luxuryFilter, false);
+      let html = renderSubHeader(title, `${owned.length} Aset Dimiliki`);
 
-      if (ownedItems.length === 0) {
-        ownedHtml += `
-          <div class="glass-panel p-8 rounded-2xl border border-slate-800 text-center space-y-3">
-            <div class="text-4xl">🏎️</div>
-            <h3 class="font-bold text-white text-sm">Garasi & Brankas Kemewahan Masih Kosong</h3>
+      if (owned.length === 0) {
+        const facilityIcons = { garage: '🏎️', hangar: '✈️', harbor: '🛥️', island: '🏝️' };
+        const facilityShopNames = { car: 'Car Showroom', flight: 'Aircraft Shop', yacht: 'Yacht Shop', island: 'Island Shop' };
+        html += `
+          <div class="glass-panel p-8 rounded-2xl border border-slate-800 text-center space-y-3 mt-4">
+            <div class="text-4xl">${facilityIcons[sub.facility] || '🏝️'}</div>
+            <h3 class="font-bold text-white text-sm">${title} Masih Kosong</h3>
             <p class="text-xs text-slate-400 leading-relaxed max-w-xs mx-auto">
-              Anda belum mengoleksi motor, supercar, jam tangan mewah, ataupun mansion pribadi. Buka showroom untuk mulai berbelanja aset prestisius!
+              ${sub.facility === 'island' 
+                ? 'Anda belum memiliki pulau pribadi sendiri. Kunjungi Island Shop untuk memiliki pulau atol karang, laguna tropis, hingga megastruktur pulau buatan!' 
+                : 'Anda belum memarkir aset di fasilitas ini. Kunjungi showroom untuk memilih dan membeli armada prestisius!'}
             </p>
-            <button onclick="game.setLuxuryView('catalog')" class="btn-press px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-md shadow-amber-400/20">
-              🛒 Buka Showroom Kemewahan
-            </button>
-          </div>
-        `;
-      } else if (filteredOwned.length === 0) {
-        ownedHtml += `
-          <div class="p-6 rounded-2xl bg-slate-950/60 border border-slate-800 text-center space-y-2">
-            <div class="text-slate-400 text-xs">Tidak ada aset dalam kategori ini di koleksi Anda.</div>
-            <button onclick="game.setLuxuryView('catalog')" class="btn-press px-3.5 py-1.5 rounded-xl bg-slate-800 text-amber-300 text-xs font-bold">
-              + Cari di Showroom
+            <button onclick="game.openLuxuryShop('${targetShop}')" class="btn-press px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-md shadow-amber-400/20">
+              🛒 Buka ${facilityShopNames[targetShop] || 'Showroom'}
             </button>
           </div>
         `;
       } else {
-        filteredOwned.forEach(lux => {
+        html += `<div class="space-y-3 mt-3">`;
+        owned.forEach(lux => {
           const sellVal = Math.round(lux.price * 0.75);
-          ownedHtml += `
-            <div class="glass-panel rounded-2xl border border-amber-400/40 bg-gradient-to-b from-amber-500/10 to-transparent overflow-hidden mb-3.5 shadow-lg card-transition">
+          html += `
+            <div class="glass-panel rounded-2xl border border-amber-400/40 bg-gradient-to-b from-amber-500/10 to-transparent overflow-hidden shadow-lg card-transition">
               <div class="relative h-36 w-full bg-slate-800 overflow-hidden">
-                <img src="${lux.image}" alt="${lux.name}" class="w-full h-full object-cover" onerror="this.style.display='none'">
+                <img src="${lux.image}" alt="${lux.name}" class="w-full h-full object-cover" onerror="this.src='images/facility_island.jpg'">
                 <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
-                
                 <div class="absolute top-2 left-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950/85 backdrop-blur-md border border-amber-500/40 text-[11px] font-bold text-amber-300">
                   <span>⭐</span>
                   <span>+${lux.prestige.toLocaleString()} Prestise</span>
                 </div>
-
-                <div class="absolute top-2 right-2">
-                  <span class="w-8 h-8 rounded-full bg-slate-950/80 backdrop-blur-md border border-slate-700 flex items-center justify-center text-sm shadow">
-                    ${lux.icon}
-                  </span>
-                </div>
-
                 <div class="absolute bottom-2 left-3 right-3">
                   <div class="text-[11px] text-amber-300 font-semibold uppercase">${lux.category}</div>
                   <h4 class="font-black text-white text-base leading-tight drop-shadow-md">${lux.name}</h4>
@@ -8333,14 +9310,11 @@ Object.assign(GameEngine.prototype, {
 
               <div class="p-3 pt-2.5 flex items-center justify-between gap-3">
                 <div>
-                  <div class="text-[11px] text-slate-400">Nilai Perolehan</div>
+                  <div class="text-[11px] text-slate-400">Valuasi Saat Ini</div>
                   <div class="font-extrabold text-white text-sm">${this.formatMoney(lux.price)}</div>
                 </div>
-
                 <div class="flex items-center gap-2">
-                  <span class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold">
-                    ✓ Dimiliki
-                  </span>
+                  <span class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold">✓ Dimiliki</span>
                   <button onclick="game.sellLuxury('${lux.id}')" class="btn-press px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-rose-900/40 text-slate-300 hover:text-rose-300 border border-slate-700 text-xs font-bold" title="Jual kembali seharga 75% nilai perolehan">
                     Jual (${this.formatCompact(sellVal)})
                   </button>
@@ -8349,38 +9323,48 @@ Object.assign(GameEngine.prototype, {
             </div>
           `;
         });
+        html += `</div>`;
       }
-      ownedContainer.innerHTML = ownedHtml;
+      container.innerHTML = html;
+      return;
     }
 
-    // 3. Render Catalog View
-    if (catalogContainer) {
-      const filteredCatalog = LUXURY_CATALOG.filter(lux => {
-        if (this.luxuryFilter === 'all') return true;
-        return lux.type === this.luxuryFilter;
-      });
+    // 2. Shop Sub-View
+    if (sub.type === 'shop') {
+      const shopTitles = {
+        car: 'Car Showroom (Mobil & Motor Sport)',
+        flight: 'Aircraft Shop (Jet Pribadi & Helikopter)',
+        yacht: 'Yacht Shop (Yacht & Superyacht Mewah)',
+        island: 'Island Shop (Agensi Pulau Pribadi Dunia)'
+      };
+      const title = shopTitles[sub.shopType] || 'Showroom';
 
-      let catalogHtml = renderFilterButtons(this.luxuryFilter, true);
+      const filterType = lux => {
+        if (sub.shopType === 'car') return lux.type === 'car' || lux.type === 'moto';
+        if (sub.shopType === 'flight') return lux.type === 'flight';
+        if (sub.shopType === 'yacht') return lux.type === 'yacht';
+        if (sub.shopType === 'island') return lux.type === 'island';
+        return true;
+      };
 
-      filteredCatalog.forEach(lux => {
-        const isOwned = this.state.luxury.includes(lux.id);
+      const catalog = LUXURY_CATALOG.filter(filterType);
+
+      let html = renderSubHeader(title, `${catalog.length} ${sub.shopType === 'island' ? 'Pulau' : 'Model'} Tersedia`);
+      html += `<div class="space-y-3 mt-3">`;
+
+      catalog.forEach(lux => {
+        const isOwned = (this.state.luxury || []).includes(lux.id);
         const canAfford = this.state.cash >= lux.price;
 
-        catalogHtml += `
-          <div class="glass-panel rounded-2xl border ${isOwned ? 'border-amber-400/40 bg-gradient-to-b from-amber-500/5 to-transparent' : 'border-slate-800'} overflow-hidden mb-3.5 shadow-lg card-transition">
+        html += `
+          <div class="glass-panel rounded-2xl border ${isOwned ? 'border-amber-400/40 bg-gradient-to-b from-amber-500/5 to-transparent' : 'border-slate-800'} overflow-hidden shadow-lg card-transition">
             <div class="relative h-36 w-full bg-slate-800 overflow-hidden">
-              <img src="${lux.image}" alt="${lux.name}" class="w-full h-full object-cover" onerror="this.style.display='none'">
+              <img src="${lux.image}" alt="${lux.name}" class="w-full h-full object-cover" onerror="this.src='images/facility_island.jpg'">
               <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
               
               <div class="absolute top-2 left-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950/85 backdrop-blur-md border border-amber-500/40 text-[11px] font-bold text-amber-300">
                 <span>⭐</span>
                 <span>+${lux.prestige.toLocaleString()} Prestise</span>
-              </div>
-
-              <div class="absolute top-2 right-2">
-                <span class="w-8 h-8 rounded-full bg-slate-950/80 backdrop-blur-md border border-slate-700 flex items-center justify-center text-sm shadow">
-                  ${lux.icon}
-                </span>
               </div>
 
               <div class="absolute bottom-2 left-3 right-3">
@@ -8397,8 +9381,8 @@ Object.assign(GameEngine.prototype, {
 
               <div>
                 ${isOwned ? `
-                  <span class="px-4 py-2 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-black flex items-center gap-1.5 shadow-sm">
-                    <span>✓</span> Sudah Dikoleksi
+                  <span class="px-3.5 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-black flex items-center gap-1.5 shadow-sm">
+                    <span>✓</span> Dimiliki
                   </span>
                 ` : `
                   <button onclick="game.buyLuxury('${lux.id}')" class="btn-press px-4 py-2 rounded-xl text-xs font-black transition ${
@@ -8414,7 +9398,166 @@ Object.assign(GameEngine.prototype, {
           </div>
         `;
       });
-      catalogContainer.innerHTML = catalogHtml;
+      html += `</div>`;
+      container.innerHTML = html;
+      return;
+    }
+
+    // 3. Residence Sub-View
+    if (sub.type === 'residence') {
+      const curLevel = this.state.residenceLevel || 1;
+      const curTier = (typeof RESIDENCE_TIERS !== 'undefined' && RESIDENCE_TIERS[curLevel - 1]) || { name: 'Studio Penthouse', price: 2500000000, prestige: 100 };
+      const nextTier = typeof RESIDENCE_TIERS !== 'undefined' ? RESIDENCE_TIERS[curLevel] : null;
+
+      let html = renderSubHeader('Residence Manager', `Tingkat ${curLevel} dari ${RESIDENCE_TIERS.length}`);
+
+      // Hero Card of Current Residence
+      html += `
+        <div class="glass-panel rounded-2xl border border-teal-500/40 overflow-hidden mt-3 shadow-xl">
+          <div class="relative h-44 w-full bg-slate-900 overflow-hidden">
+            <img src="images/residence_mansion.jpg" alt="Mansion" class="w-full h-full object-cover">
+            <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
+            <div class="absolute top-2 left-2 px-2.5 py-1 rounded-full bg-teal-950/80 backdrop-blur-md border border-teal-400/50 text-[11px] font-bold text-teal-300">
+              Level ${curLevel}: ${curTier.name}
+            </div>
+            <div class="absolute bottom-2 left-3 right-3 flex items-center justify-between">
+              <div>
+                <div class="text-[10px] text-teal-300 uppercase font-bold tracking-wider">Valuasi Hunian</div>
+                <div class="text-xl font-black text-white drop-shadow">${this.formatMoney(curTier.price)}</div>
+              </div>
+              <div class="text-right">
+                <div class="text-[10px] text-amber-300 uppercase font-bold tracking-wider">Prestise</div>
+                <div class="text-base font-black text-amber-400">⭐ +${(curTier.prestige || 0).toLocaleString()}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Upgrade Next Tier Section -->
+          <div class="p-4 bg-slate-900/90 border-t border-slate-800">
+            ${nextTier ? `
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <span class="text-[10px] text-slate-400 uppercase font-bold">Upgrade Berikutnya</span>
+                    <h4 class="font-black text-white text-sm">Level ${curLevel + 1}: ${nextTier.name}</h4>
+                  </div>
+                  <div class="text-right">
+                    <span class="text-[10px] text-slate-400 uppercase font-bold">Prestise Baru</span>
+                    <div class="text-xs font-black text-amber-400">⭐ +${nextTier.prestige.toLocaleString()}</div>
+                  </div>
+                </div>
+
+                <button onclick="game.upgradeResidence()" class="btn-press w-full py-2.5 rounded-xl font-black text-xs transition ${
+                  this.state.cash >= nextTier.price
+                    ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 shadow-lg shadow-teal-500/20 hover:brightness-110'
+                    : 'bg-slate-800 text-slate-400 border border-slate-700'
+                }">
+                  Tingkatkan Hunian (${this.formatCompact(nextTier.price)})
+                </button>
+              </div>
+            ` : `
+              <div class="text-center py-2 text-emerald-400 font-bold text-xs">
+                🏆 Anda telah mencapai Tingkat Tempat Tinggal Tertinggi (Maharaja Estate)!
+              </div>
+            `}
+          </div>
+        </div>
+
+        <!-- All Tiers Progression List -->
+        <div class="space-y-2 mt-4">
+          <h3 class="text-xs uppercase font-extrabold text-slate-400 tracking-wider">Daftar Tingkat Tempat Tinggal</h3>
+          <div class="space-y-2">
+      `;
+
+      RESIDENCE_TIERS.forEach(t => {
+        const isCurrent = t.level === curLevel;
+        const isUnlocked = t.level <= curLevel;
+        html += `
+          <div class="p-3 rounded-2xl border ${isCurrent ? 'bg-teal-500/10 border-teal-500/50' : (isUnlocked ? 'bg-slate-900/70 border-slate-800' : 'bg-slate-950/40 border-slate-900 opacity-60')} flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="text-xl">${t.icon || '🏡'}</span>
+              <div>
+                <div class="font-bold text-xs text-white flex items-center gap-1.5">
+                  <span>Level ${t.level}: ${t.name}</span>
+                  ${isCurrent ? '<span class="px-1.5 py-0.5 rounded-md bg-teal-500/30 text-teal-300 text-[9px] font-black">Hadir</span>' : ''}
+                </div>
+                <div class="text-[10px] text-slate-400">${this.formatMoney(t.price)} • ⭐ +${t.prestige.toLocaleString()} prestise</div>
+              </div>
+            </div>
+            <div>
+              ${isUnlocked ? '<span class="text-emerald-400 font-bold text-xs">✓ Terbuka</span>' : '<span class="text-slate-500 text-xs">🔒 Terkunci</span>'}
+            </div>
+          </div>
+        `;
+      });
+
+      html += `
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = html;
+      return;
+    }
+
+    // 4. Collection Sub-View
+    if (sub.type === 'collection') {
+      const collTitles = {
+        coins: 'Koleksi Koin Kuno (Coins)',
+        paintings: 'Galeri Mahakarya Lukisan (Paintings)',
+        unique: 'Barang Unik & Artefak Langka (Unique items)',
+        retro_cars: 'Koleksi Mobil Klasik Vintage (Retro cars)',
+        jewels: 'Koleksi Perhiasan & Mahkota Monarki (Jewels)',
+        stamps: 'Filateli Perangko Bersejarah (Stamps)'
+      };
+      const title = collTitles[sub.collKey] || 'Collections';
+      const items = (typeof COLLECTIONS_CATALOG !== 'undefined' && COLLECTIONS_CATALOG[sub.collKey]) || [];
+      const ownedIds = (this.state.collections && this.state.collections[sub.collKey]) || [];
+
+      let html = renderSubHeader(title, `${ownedIds.length} of ${items.length} Dikoleksi`);
+      html += `<div class="space-y-2.5 mt-3">`;
+
+      items.forEach(it => {
+        const isOwned = ownedIds.includes(it.id);
+        const canAfford = this.state.cash >= it.price;
+        const sellVal = Math.round(it.price * 0.75);
+
+        html += `
+          <div class="glass-panel p-3.5 rounded-2xl border ${isOwned ? 'border-amber-400/40 bg-gradient-to-r from-amber-500/5 to-transparent' : 'border-slate-800/80'} flex items-center justify-between gap-3 shadow-md card-transition">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700/80 flex items-center justify-center shrink-0 overflow-hidden text-2xl">
+                ${it.image ? `<img src="${it.image}" alt="${it.name}" class="w-full h-full object-cover">` : (it.icon || '💎')}
+              </div>
+              <div class="min-w-0">
+                <div class="font-extrabold text-xs text-white truncate">${it.name}</div>
+                <div class="text-[10px] text-amber-400 font-semibold mt-0.5">⭐ +${it.prestige.toLocaleString()} Prestise</div>
+                <div class="text-[11px] font-bold text-slate-300">${this.formatMoney(it.price)}</div>
+              </div>
+            </div>
+
+            <div class="shrink-0 flex items-center gap-1.5">
+              ${isOwned ? `
+                <span class="px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">✓ Dimiliki</span>
+                <button onclick="game.sellCollectionItem('${sub.collKey}', '${it.id}')" class="btn-press px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-rose-900/40 text-slate-300 hover:text-rose-300 border border-slate-700 text-[10px] font-bold">
+                  Lelang (${this.formatCompact(sellVal)})
+                </button>
+              ` : `
+                <button onclick="game.buyCollectionItem('${sub.collKey}', '${it.id}')" class="btn-press px-3.5 py-1.5 rounded-xl font-black text-xs transition ${
+                  canAfford
+                    ? 'bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-md shadow-amber-400/20'
+                    : 'bg-slate-800 text-slate-400 border border-slate-700'
+                }">
+                  Beli (${this.formatCompact(it.price)})
+                </button>
+              `}
+            </div>
+          </div>
+        `;
+      });
+
+      html += `</div>`;
+      container.innerHTML = html;
+      return;
     }
   },
 

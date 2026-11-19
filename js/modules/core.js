@@ -30,6 +30,7 @@ class GameEngine {
     this.commodityDetailSymbol = null;
     this.commodityOrderType = 'LONG'; // 'LONG' | 'SHORT'
     this.commodityOrderLeverage = 5;
+    this.lastMarketTickTime = Date.now();
   }
 
   getDefaultState() {
@@ -160,7 +161,26 @@ class GameEngine {
 
   tick() {
     this.subTickTimer += this.speed;
-    this.simulateMarketTick();
+
+    // Otomatis ubah harga saham, kripto, ataupun komoditas setiap 1 menit (60 detik) dunia nyata
+    const now = Date.now();
+    if (!this.lastMarketTickTime) this.lastMarketTickTime = now;
+    const elapsedMarketSec = Math.floor((now - this.lastMarketTickTime) / 1000);
+
+    if (elapsedMarketSec >= 60) {
+      this.lastMarketTickTime = now;
+      this.simulateMarketTick(true);
+      if (this.activeTab === 'invest') {
+        this.renderInvestments();
+      }
+      if (typeof this.updateOpenMarketModal === 'function') {
+        this.updateOpenMarketModal();
+      }
+    }
+
+    if (typeof this.updateMarketCountdown === 'function') {
+      this.updateMarketCountdown(Math.max(0, 60 - elapsedMarketSec));
+    }
 
     // Cek Penyelesaian Proyek Upgrade Bisnis & Konstruksi Garasi / Gudang (Real-World Timer)
     if (Array.isArray(this.state.businesses)) {

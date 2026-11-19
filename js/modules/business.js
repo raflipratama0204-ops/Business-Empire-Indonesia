@@ -220,6 +220,63 @@ Object.assign(GameEngine.prototype, {
     this.render();
   },
 
+  sellBusiness(bizId) {
+    const biz = this.state.businesses.find(b => b.instanceId === bizId);
+    if (!biz) return;
+
+    const valuation = this.calculateBusinessValuation(biz);
+    // Persyaratan: Uang hasil penjualan diterima pemain 30% dari kapitalisasi/valuasi bisnis
+    const payout = Math.round(valuation * 0.3);
+
+    // Cek tunggakan pajak mandiri bisnis jika ada
+    const bizTax = this.getBusinessTax(biz);
+    const unpaidTax = (bizTax && bizTax.unpaid) ? bizTax.unpaid : 0;
+
+    let confirmMsg = `Konfirmasi Penjualan / Likuidasi Bisnis:\n\n` +
+      `🏢 Nama Bisnis: "${biz.name}"\n` +
+      `🏛️ Kapitalisasi / Valuasi Pasar: ${this.formatMoney(valuation)}\n` +
+      `💰 Hasil Penjualan Bersih (30%): ${this.formatMoney(payout)}\n`;
+
+    if (unpaidTax > 0) {
+      confirmMsg += `⚠️ Tunggakan Pajak Mandiri: -${this.formatMoney(unpaidTax)} (akan dipotong otomatis)\n`;
+      if (payout < unpaidTax) {
+        confirmMsg += `\n❌ Hasil penjualan tidak cukup melunasi tunggakan pajak (${this.formatMoney(unpaidTax)})! Lunasi pajak terlebih dahulu.`;
+      }
+    }
+
+    confirmMsg += `\nApakah Anda yakin ingin melikuidasi & menjual bisnis ini? Seluruh aset, armada, dan fasilitasnya akan dilikuidasi permanen.`;
+
+    if (!confirm(confirmMsg)) return;
+
+    let netReceived = payout;
+    if (unpaidTax > 0) {
+      if (netReceived < unpaidTax) {
+        window.sound.playError();
+        this.showToast(`Gagal menjual: Hasil penjualan tidak cukup melunasi tunggakan pajak ${this.formatMoney(unpaidTax)}!`, 'error');
+        return;
+      }
+      netReceived -= unpaidTax;
+      this.showToast(`Tunggakan pajak ${this.formatMoney(unpaidTax)} otomatis dilunasi dari hasil likuidasi.`, 'info');
+    }
+
+    this.state.cash += netReceived;
+    this.state.totalEarnedLifetime += netReceived;
+
+    // Hapus bisnis dari daftar kepemilikan
+    this.state.businesses = this.state.businesses.filter(b => b.instanceId !== bizId);
+
+    if (this.selectedBizId === bizId) {
+      this.selectedBizId = null;
+      this.businessView = 'owned';
+    }
+
+    this.saveGame();
+    window.sound.playCash();
+    this.showToast(`Bisnis "${biz.name}" berhasil dijual! Anda menerima ${this.formatMoney(netReceived)} (30% dari kapitalisasi bisnis).`, 'success');
+    this.showOwnedBusinesses();
+    this.render();
+  },
+
   getBusinessUpgradeCost(biz) {
     const sector = BUSINESS_SECTORS.find(s => s.sectorId === biz.sectorId);
     let baseCost = sector ? (sector.baseCost || 50000000) : 50000000;
