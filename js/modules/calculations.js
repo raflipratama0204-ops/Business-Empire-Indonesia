@@ -479,6 +479,15 @@ Object.assign(GameEngine.prototype, {
       return Math.round(sub.revenue * stage.multiplier);
     }
 
+    // 3b. Jaringan Hotel & Resort Bintang (Dynamic Star Rating + Upgrade Stages)
+    if (biz.sectorId === 'hotel') {
+      const sub = sector.subtypes.find(st => st.id === biz.subTypeId) || sector.subtypes[0];
+      const stages = typeof HOTEL_STAGES !== 'undefined' ? HOTEL_STAGES : [];
+      const stageIdx = Math.min(biz.level, stages.length || 6) - 1;
+      const stage = stages[stageIdx] || { multiplier: 1.0 };
+      return Math.round(sub.revenue * stage.multiplier);
+    }
+
     // 4. Ekspedisi & Pergudangan Logistik
     if (sector.isLogistics) {
       let rev = 0;

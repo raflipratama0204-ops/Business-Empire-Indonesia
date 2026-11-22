@@ -86,7 +86,7 @@ const BUSINESS_SECTORS = [
     name: 'Brand Fashion & Pakaian',
     icon: '👕',
     image: 'images/sector_fashion.jpg',
-    desc: 'Industri pakaian & garmen. Pilih membuka Brand Distro Biasa atau Luxury Brand Haute-Couture.',
+    desc: 'Industri pakaian & garmen. Pilih membuka Brand Distro Biasa, Pakaian Bisnis Formal, atau Luxury Brand Haute-Couture.',
     hasSubtypes: true,
     subtypes: [
       {
@@ -98,12 +98,58 @@ const BUSINESS_SECTORS = [
         icon: '👕'
       },
       {
+        id: 'business',
+        name: 'Brand Pakaian Bisnis & Jas Eksekutif',
+        cost: 650000000, // Rp 650 Juta
+        revenue: 17500000, // Rp 17,5 Juta / jam
+        desc: 'Busana kerja formal, setelan jas tailored, kemeja eksekutif premium, dan blazer kantor.',
+        icon: '👔'
+      },
+      {
         id: 'luxury',
         name: 'Luxury Haute-Couture Fashion House',
         cost: 1400000000, // Rp 1,4 Miliar
         revenue: 38000000, // Rp 38 Juta / jam
         desc: 'Rumah mode mewah internasional dengan produk eksklusif dan margin laba tinggi.',
         icon: '✨'
+      }
+    ]
+  },
+  {
+    sectorId: 'hotel',
+    name: 'Jaringan Hotel & Resort Bintang',
+    icon: '🏨',
+    image: 'images/sector_hotel.jpg',
+    desc: 'Industri perhotelan & hospitality. Pilih kelas hotel bintang impian Anda, kelola kamar, dan tingkatkan rating bintang dengan menambah fasilitas mewah.',
+    hasSubtypes: true,
+    isHotel: true,
+    subtypes: [
+      {
+        id: 'hotel_budget',
+        name: 'Hotel Budget & Transit (⭐⭐ Bintang 2)',
+        cost: 450000000, // Rp 450 Juta
+        revenue: 12000000, // Rp 12 Juta / jam
+        desc: 'Hotel kapsul & transit nyaman untuk pelancong praktis dan backpacker.',
+        icon: '🛏️',
+        stars: 2
+      },
+      {
+        id: 'hotel_business',
+        name: 'City Business Hotel (⭐⭐⭐ Bintang 3)',
+        cost: 3200000000, // Rp 3,2 Miliar
+        revenue: 85000000, // Rp 85 Juta / jam
+        desc: 'Hotel bisnis perkotaan dengan fasilitas ballroom rapat dan restoran prasmanan.',
+        icon: '🏨',
+        stars: 3
+      },
+      {
+        id: 'hotel_luxury',
+        name: 'Grand Luxury Resort & Spa (⭐⭐⭐⭐⭐ Bintang 5)',
+        cost: 22000000000, // Rp 22 Miliar
+        revenue: 580000000, // Rp 580 Juta / jam
+        desc: 'Resort mewah bintang lima dengan presidential suite, infinity pool, spa, dan helipad.',
+        icon: '👑',
+        stars: 5
       }
     ]
   },
@@ -233,6 +279,70 @@ const FASHION_STAGES = [
     icon: '👑',
     multiplier: 19.5,
     upgradeDuration: 600 // 10 menit
+  }
+];
+
+// Tahap Milestone Fasilitas & Bintang Jaringan Hotel & Resort (6 Tingkatan)
+const HOTEL_STAGES = [
+  {
+    level: 1,
+    title: 'Kamar Standar & Resepsionis 24 Jam',
+    desc: 'Layanan akomodasi kamar standar dengan sarapan pagi dan Wi-Fi cepat.',
+    facilityScope: 'Akomodasi Standar',
+    icon: '🛏️',
+    multiplier: 1.0,
+    starBonus: 0,
+    upgradeDuration: 25 // 25 detik
+  },
+  {
+    level: 2,
+    title: 'Coffee Lounge & Layanan Room Service',
+    desc: 'Kafe modern di lobi dan room service 24 jam untuk kenyamanan para tamu.',
+    facilityScope: 'Kafe & Room Service',
+    icon: '☕',
+    multiplier: 1.9,
+    starBonus: 1,
+    upgradeDuration: 50 // 50 detik
+  },
+  {
+    level: 3,
+    title: 'Pusat Kebugaran, Sauna & Kolam Renang Infinity',
+    desc: 'Fasilitas infinity pool rooftop dan gym lengkap untuk menambah kepuasan tamu menginap.',
+    facilityScope: 'Pusat Kebugaran & Kolam Renang',
+    icon: '🏊‍♂️',
+    multiplier: 3.5,
+    starBonus: 1,
+    upgradeDuration: 100 // 1.5 menit
+  },
+  {
+    level: 4,
+    title: 'Grand Ballroom & Restoran Fine Dining Rooftop',
+    desc: 'Pusat konvensi megah untuk resepsi pernikahan dan kuliner rooftop berkelas internasional.',
+    facilityScope: 'Grand Ballroom & Kuliner Michelin',
+    icon: '🍽️',
+    multiplier: 6.2,
+    starBonus: 2,
+    upgradeDuration: 200 // 3.3 menit
+  },
+  {
+    level: 5,
+    title: 'Presidential Suites, Luxury Spa & Helipad VIP',
+    desc: 'Fasilitas ultra-mewah tingkat dunia! Melayani tamu VVIP, konglomerat, dan selebritas internasional.',
+    facilityScope: 'Presidential Suites & Helipad VVIP',
+    icon: '🚁',
+    multiplier: 11.5,
+    starBonus: 2,
+    upgradeDuration: 360 // 6 menit
+  },
+  {
+    level: 6,
+    title: 'World-Class Sovereign Palace & Private Beach',
+    desc: 'Mahakarya resor perhotelan terdepan di dunia dengan sertifikasi Diamond 7-Star Hospitality.',
+    facilityScope: 'Resor Megah Diamond Palace 🌟',
+    icon: '👑',
+    multiplier: 21.0,
+    starBonus: 3,
+    upgradeDuration: 720 // 12 menit
   }
 ];
 

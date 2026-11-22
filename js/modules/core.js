@@ -31,6 +31,9 @@ class GameEngine {
     this.commodityOrderType = 'LONG'; // 'LONG' | 'SHORT'
     this.commodityOrderLeverage = 5;
     this.lastMarketTickTime = Date.now();
+    this.selectedBusinessGroupId = null; // Filter id grup bisnis (null = semua)
+    this.pendingRenameBizId = null;
+    this.pendingAssignGroupBizId = null;
   }
 
   getDefaultState() {
@@ -48,6 +51,7 @@ class GameEngine {
       },
       gameHours: 0,
       businesses: [], // Array of business instances
+      businessGroups: [], // [ { id, name, icon, createdAt } ]
       stocks: {},     // { [symbol]: { shares: 0, totalCost: 0 } }
       crypto: {},     // { [symbol]: { amount: 0, totalCost: 0 } }
       commodityPositions: [], // [ { id, symbol, type: 'LONG'|'SHORT', entryPrice, margin, leverage, openedAt } ]
@@ -761,6 +765,9 @@ class GameEngine {
       if (raw) {
         const parsed = JSON.parse(raw);
         this.state = Object.assign(this.getDefaultState(), parsed);
+        if (!Array.isArray(this.state.businessGroups)) {
+          this.state.businessGroups = [];
+        }
         // Migrasi armada taksi legacy veh_sedan -> veh_vios
         if (Array.isArray(this.state.businesses)) {
           this.state.businesses.forEach(biz => {

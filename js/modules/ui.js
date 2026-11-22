@@ -183,15 +183,102 @@ Object.assign(GameEngine.prototype, {
     const bizBanner = document.getElementById('biz-tax-banner');
     if (!container) return;
 
-    const list = this.state.businesses || [];
-    if (countEl) countEl.innerText = `${list.length} Bisnis Beroperasi`;
+    const allBusinesses = this.state.businesses || [];
+    const allGroups = this.state.businessGroups || [];
+    if (countEl) countEl.innerText = `${allBusinesses.length} Bisnis Beroperasi`;
+
+    // Render Groups Filter & Holding Summary Bar
+    const groupsBar = document.getElementById('biz-groups-bar');
+    if (groupsBar) {
+      if (allGroups.length > 0) {
+        const selectedId = this.selectedBusinessGroupId;
+        const totalAll = allBusinesses.length;
+        const ungroupedCount = allBusinesses.filter(b => !b.groupId).length;
+
+        let holdingSummaryHtml = '';
+        if (selectedId && selectedId !== 'ungrouped') {
+          const activeGrp = allGroups.find(g => g.id === selectedId);
+          if (activeGrp) {
+            const members = allBusinesses.filter(b => b.groupId === activeGrp.id);
+            const totalVal = members.reduce((sum, b) => sum + this.calculateBusinessValuation(b), 0);
+            const totalRev = members.reduce((sum, b) => sum + this.calculateSingleBusinessRevenue(b), 0);
+            const uniqueSectors = new Set(members.map(b => b.sectorId)).size;
+            holdingSummaryHtml = `
+              <div class="p-3 mb-2 rounded-2xl bg-gradient-to-r from-blue-900/30 to-indigo-950/40 border border-blue-500/30 space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xl">${activeGrp.icon || '🏢'}</span>
+                    <div>
+                      <h4 class="font-black text-white text-xs">${activeGrp.name}</h4>
+                      <span class="text-[10px] text-blue-300 font-medium">${members.length} Anak Perusahaan (${uniqueSectors} Sektor)</span>
+                    </div>
+                  </div>
+                  <button onclick="game.clearGroupFilter()" class="text-[10px] px-2 py-0.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700">Tampilkan Semua</button>
+                </div>
+                <div class="grid grid-cols-2 gap-2 pt-1 border-t border-blue-500/20 text-[11px]">
+                  <div>
+                    <span class="text-[9px] text-slate-400 block">Valuasi Konsolidasi</span>
+                    <span class="font-extrabold text-amber-300 font-mono">${this.formatMoney(totalVal)}</span>
+                  </div>
+                  <div>
+                    <span class="text-[9px] text-slate-400 block">Dividen Konsolidasi</span>
+                    <span class="font-bold text-emerald-400">+${this.formatCompact(totalRev)}/jam</span>
+                  </div>
+                </div>
+                ${uniqueSectors >= 2 ? `
+                  <div class="px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-[10px] text-amber-300 flex items-center gap-1 font-semibold">
+                    <span>🌟</span> Sinergi Konglomerat Aktif (Portofolio Multi-Sektor)
+                  </div>
+                ` : ''}
+              </div>
+            `;
+          }
+        }
+
+        groupsBar.innerHTML = `
+          ${holdingSummaryHtml}
+          <div class="flex items-center gap-1.5 overflow-x-auto pb-1.5 no-scrollbar text-[11px]">
+            <button onclick="game.clearGroupFilter()" class="btn-press px-2.5 py-1 rounded-xl whitespace-nowrap font-bold transition ${!selectedId ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'bg-slate-900 text-slate-400 border border-slate-800'}">
+              Semua (${totalAll})
+            </button>
+            ${allGroups.map(grp => {
+              const count = allBusinesses.filter(b => b.groupId === grp.id).length;
+              const isSel = selectedId === grp.id;
+              return `
+                <button onclick="game.filterByGroup('${grp.id}')" class="btn-press px-2.5 py-1 rounded-xl whitespace-nowrap font-bold flex items-center gap-1 transition ${isSel ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'bg-slate-900 text-slate-400 border border-slate-800'}">
+                  <span>${grp.icon || '🏢'}</span>
+                  <span>${grp.name} (${count})</span>
+                </button>
+              `;
+            }).join('')}
+            ${ungroupedCount > 0 ? `
+              <button onclick="game.filterByGroup('ungrouped')" class="btn-press px-2.5 py-1 rounded-xl whitespace-nowrap font-bold transition ${selectedId === 'ungrouped' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'bg-slate-900 text-slate-400 border border-slate-800'}">
+                Mandiri (${ungroupedCount})
+              </button>
+            ` : ''}
+          </div>
+        `;
+        groupsBar.classList.remove('hidden');
+      } else {
+        groupsBar.innerHTML = '';
+        groupsBar.classList.add('hidden');
+      }
+    }
+
+    // Filter daftar bisnis jika filter grup aktif
+    let list = allBusinesses;
+    if (this.selectedBusinessGroupId === 'ungrouped') {
+      list = list.filter(b => !b.groupId);
+    } else if (this.selectedBusinessGroupId) {
+      list = list.filter(b => b.groupId === this.selectedBusinessGroupId);
+    }
 
     // Render Tax Banner di Tab Bisnis
     if (bizBanner && this.state.businesses) {
       let totalUnpaid = 0;
       let suspendedCount = 0;
       let earliestDeadline = null;
-      list.forEach(b => {
+      allBusinesses.forEach(b => {
         const t = this.getBusinessTax(b);
         if (t.unpaid > 0) {
           totalUnpaid += t.unpaid;
@@ -244,16 +331,29 @@ Object.assign(GameEngine.prototype, {
     }
 
     if (list.length === 0) {
-      container.innerHTML = `
-        <div class="glass-panel p-6 rounded-2xl border border-slate-800 text-center space-y-3">
-          <div class="text-4xl">🏢</div>
-          <h3 class="font-bold text-white text-sm">Belum Ada Bisnis yang Dibuka</h3>
-          <p class="text-xs text-slate-400">Anda belum mendirikan perusahaan apa pun. Klik tombol di bawah untuk memilih sektor usaha pertama Anda!</p>
-          <button onclick="game.showBusinessCatalog()" class="btn-press px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs shadow-md shadow-emerald-500/20">
-            + Buka Bisnis Pertama Anda
-          </button>
-        </div>
-      `;
+      if (this.selectedBusinessGroupId) {
+        container.innerHTML = `
+          <div class="glass-panel p-6 rounded-2xl border border-slate-800 text-center space-y-3">
+            <div class="text-4xl">🏢</div>
+            <h3 class="font-bold text-white text-sm">Tidak Ada Bisnis di Kategori Ini</h3>
+            <p class="text-xs text-slate-400">Belum ada anak perusahaan yang dimasukkan ke dalam grup ini.</p>
+            <button onclick="game.clearGroupFilter()" class="btn-press px-4 py-2 rounded-xl bg-slate-800 text-slate-200 font-bold text-xs">
+              Tampilkan Semua Bisnis
+            </button>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div class="glass-panel p-6 rounded-2xl border border-slate-800 text-center space-y-3">
+            <div class="text-4xl">🏢</div>
+            <h3 class="font-bold text-white text-sm">Belum Ada Bisnis yang Dibuka</h3>
+            <p class="text-xs text-slate-400">Anda belum mendirikan perusahaan apa pun. Klik tombol di bawah untuk memilih sektor usaha pertama Anda!</p>
+            <button onclick="game.showBusinessCatalog()" class="btn-press px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs shadow-md shadow-emerald-500/20">
+              + Buka Bisnis Pertama Anda
+            </button>
+          </div>
+        `;
+      }
       return;
     }
 
@@ -319,6 +419,11 @@ Object.assign(GameEngine.prototype, {
       } else if (biz.sectorId === 'fashion') {
         const stage = FASHION_STAGES[Math.min(biz.level, FASHION_STAGES.length) - 1];
         statusInfo = `Tahap: ${stage.title}`;
+      } else if (biz.sectorId === 'hotel') {
+        const stage = HOTEL_STAGES[Math.min(biz.level, HOTEL_STAGES.length) - 1];
+        const baseStars = biz.stars || (biz.subTypeId === 'hotel_luxury' ? 5 : (biz.subTypeId === 'hotel_business' ? 3 : 2));
+        const curStars = Math.min(5, baseStars + (stage ? stage.starBonus : 0));
+        statusInfo = `${'⭐'.repeat(curStars)} Hotel Bintang ${curStars} • ${stage.name}`;
       } else {
         statusInfo = `Tingkat Level ${biz.level}`;
       }
@@ -338,9 +443,16 @@ Object.assign(GameEngine.prototype, {
             <img src="${sector.image}" alt="${biz.name}" class="w-full h-full object-cover hover:scale-105 transition duration-500" onerror="this.style.display='none'">
             <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
             
-            <div class="absolute top-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-[10px] font-semibold text-slate-300 max-w-[150px] truncate">
-              <span class="text-xs">${sector.icon}</span>
-              <span class="truncate">${sector.name}</span>
+            <div class="absolute top-2 left-2 flex items-center gap-1.5 flex-wrap max-w-[80%]">
+              <div class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-[10px] font-semibold text-slate-300 max-w-[150px] truncate">
+                <span class="text-xs">${sector.icon}</span>
+                <span class="truncate">${sector.name}</span>
+              </div>
+              ${biz.groupId ? `
+                <div class="px-2 py-0.5 rounded-full bg-blue-500/80 backdrop-blur-md border border-blue-400/60 text-[10px] font-bold text-slate-950 max-w-[140px] truncate">
+                  🏢 ${(allGroups.find(g => g.id === biz.groupId) || {}).name || 'Holding'}
+                </div>
+              ` : ''}
             </div>
 
             <div class="absolute top-2 right-2">
@@ -526,6 +638,10 @@ Object.assign(GameEngine.prototype, {
               <button disabled class="px-3.5 py-2 rounded-xl bg-slate-800/60 text-amber-300/80 border border-slate-800 text-xs font-bold cursor-default">
                 👑 Max Lvl
               </button>
+            ` : (biz.sectorId === 'hotel' && biz.level >= HOTEL_STAGES.length ? `
+              <button disabled class="px-3.5 py-2 rounded-xl bg-slate-800/60 text-amber-300/80 border border-slate-800 text-xs font-bold cursor-default">
+                👑 Max Bintang 5
+              </button>
             ` : `
               <button onclick="game.upgradeBusinessLevel('${biz.instanceId}')" class="btn-press px-3.5 py-2 rounded-xl ${
                 isBank && !bankReqMet
@@ -534,7 +650,7 @@ Object.assign(GameEngine.prototype, {
               } font-bold text-xs flex items-center gap-1 shadow-sm">
                 <span>${isBank && !bankReqMet ? '🔒 ' : ''}Upgrade (${this.formatCompact(upCost)})</span>
               </button>
-            `))}
+            `)))}
           </div>
         </div>
       `;
@@ -1256,6 +1372,150 @@ Object.assign(GameEngine.prototype, {
             <div class="flex items-center justify-between">
               <h4 class="text-xs uppercase tracking-wider font-extrabold text-slate-400">Roadmap Tahapan Brand Fashion</h4>
               <span class="text-[10px] text-slate-500">6 Tingkatan</span>
+            </div>
+            <div class="space-y-2">
+              ${roadmapStepsHtml}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // DETAIL: HOTEL & RESORT ROADMAP & FASILITAS BINTANG
+    else if (biz.sectorId === 'hotel') {
+      const curStageIdx = Math.min(biz.level, HOTEL_STAGES.length) - 1;
+      const curStage = HOTEL_STAGES[curStageIdx] || HOTEL_STAGES[0];
+      const isMaxStage = biz.level >= HOTEL_STAGES.length;
+      const nextStage = !isMaxStage ? HOTEL_STAGES[biz.level] : null;
+      const upgradeCost = this.getBusinessUpgradeCost(biz);
+      const isUpgrading = !!biz.upgradeInProgress;
+      const baseStars = biz.stars || (biz.subTypeId === 'hotel_luxury' ? 5 : (biz.subTypeId === 'hotel_business' ? 3 : 2));
+      const currentStars = Math.min(5, baseStars + (curStage.starBonus || 0));
+      const starIcons = '⭐'.repeat(currentStars);
+
+      let upgradeActionHtml = '';
+      if (isUpgrading) {
+        const remSec = Math.max(0, Math.ceil((biz.upgradeEndTime - Date.now()) / 1000));
+        const startTime = biz.upgradeStartTime || Date.now();
+        const endTime = biz.upgradeEndTime || (Date.now() + 1000);
+        const progress = Math.min(100, Math.max(0, ((Date.now() - startTime) / (endTime - startTime)) * 100));
+
+        upgradeActionHtml = `
+          <div class="p-3.5 rounded-xl bg-slate-900/90 border border-amber-500/40 space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-bold text-amber-300 flex items-center gap-1.5">
+                <span class="upgrade-pulsing-badge">🏗️</span>
+                Konstruksi Fasilitas Level ${biz.upgradeTargetLevel} Sedang Berjalan
+              </span>
+              <span data-biz-timer="${biz.upgradeEndTime}" class="font-mono font-bold text-amber-400">
+                ${this.formatDuration(remSec)}
+              </span>
+            </div>
+            <div class="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
+              <div data-biz-progress data-biz-start="${startTime}" data-biz-end="${endTime}" class="h-full bg-gradient-to-r from-amber-500 to-emerald-400 progress-striped" style="width: ${progress}%"></div>
+            </div>
+            <div class="text-[11px] text-slate-400 text-center">Tim kontraktor sedang memperluas fasilitas hotel & resort...</div>
+          </div>
+        `;
+      } else if (!isMaxStage && nextStage) {
+        const canAfford = this.state.cash >= upgradeCost;
+        const nextStars = Math.min(5, baseStars + (nextStage.starBonus || 0));
+        upgradeActionHtml = `
+          <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+            <div class="flex justify-between items-center text-xs">
+              <div>
+                <span class="text-[11px] text-slate-400 block font-semibold">Tingkatkan Fasilitas & Bintang:</span>
+                <span class="font-bold text-white">Level ${nextStage.level}: ${nextStage.name} (${'⭐'.repeat(nextStars)})</span>
+              </div>
+              <span class="px-2 py-1 rounded-lg bg-slate-800 text-slate-300 text-[11px] font-bold">
+                ⏱️ ${this.formatDuration(nextStage.upgradeDuration)}
+              </span>
+            </div>
+            <button onclick="game.upgradeBusinessLevel('${biz.instanceId}')" class="btn-press w-full py-2.5 rounded-xl font-black text-xs transition ${
+              canAfford
+                ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/20'
+                : 'bg-slate-800 text-slate-400 border border-slate-700'
+            }">
+              Mulai Konstruksi Fasilitas (${this.formatCompact(upgradeCost)})
+            </button>
+          </div>
+        `;
+      } else {
+        upgradeActionHtml = `
+          <div class="p-3.5 rounded-xl bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-transparent border border-amber-400/30 text-center space-y-1">
+            <div class="text-xl">👑</div>
+            <div class="font-black text-amber-300 text-xs">Resort Super Kemewahan Puncak Dunia</div>
+            <p class="text-[11px] text-slate-300">Hotel Anda telah diakui sebagai destinasi elit selebritas dan tamu kehormatan internasional.</p>
+          </div>
+        `;
+      }
+
+      // Visual Stepper Roadmap Hotel
+      const roadmapStepsHtml = HOTEL_STAGES.map(s => {
+        const isPast = biz.level > s.level;
+        const isCurrent = biz.level === s.level;
+        const stageStars = Math.min(5, baseStars + (s.starBonus || 0));
+
+        let badgeClass = 'border-slate-800 bg-slate-950 text-slate-500';
+        let statusBadge = '<span class="text-[10px] text-slate-500">🔒 Belum Dibangun</span>';
+        if (isPast) {
+          badgeClass = 'border-emerald-500/40 bg-emerald-500/5 text-slate-200';
+          statusBadge = '<span class="text-[10px] text-emerald-400 font-bold">✓ Fasilitas Beroperasi</span>';
+        } else if (isCurrent) {
+          badgeClass = 'border-amber-400/60 bg-amber-400/10 text-white shadow-sm ring-1 ring-amber-400/30';
+          statusBadge = '<span class="text-[10px] text-amber-300 font-black animate-pulse">🔥 Status Operasional Saat Ini</span>';
+        }
+
+        return `
+          <div class="p-3 rounded-xl border ${badgeClass} space-y-1.5 transition">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-xl">🏨</span>
+                <div>
+                  <div class="font-bold text-xs ${isCurrent ? 'text-amber-300 font-black' : (isPast ? 'text-white' : 'text-slate-400')}">
+                    Level ${s.level}: ${s.name}
+                  </div>
+                  <div class="text-[10px] text-amber-400 font-bold">${'⭐'.repeat(stageStars)} (Bintang ${stageStars})</div>
+                </div>
+              </div>
+              <div class="text-right">
+                ${statusBadge}
+                <div class="text-[10px] font-mono font-bold ${isCurrent ? 'text-emerald-400' : 'text-slate-400'}">${s.multiplier}x Multiplier Okupansi</div>
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-400 leading-relaxed">${s.desc}</p>
+          </div>
+        `;
+      }).join('');
+
+      specificSectionHtml = `
+        <div class="space-y-3">
+          <!-- Status Banner Hotel Saat Ini -->
+          <div class="glass-panel p-3.5 rounded-2xl border border-slate-800 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] text-slate-400 font-semibold">Taraf Akreditasi Hotel:</span>
+              <span class="text-xs font-mono font-black text-amber-300">Level ${curStage.level} / ${HOTEL_STAGES.length}</span>
+            </div>
+            <div class="flex items-center gap-2.5">
+              <span class="text-2xl">🏨</span>
+              <div>
+                <h4 class="font-bold text-white text-sm">${curStage.name}</h4>
+                <div class="text-xs text-amber-400 font-black tracking-wider">${starIcons} Hotel Bintang ${currentStars}</div>
+              </div>
+            </div>
+            <div class="text-xs text-slate-300 bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+              ${curStage.desc}
+            </div>
+          </div>
+
+          <!-- Aksi Upgrade / Timer Proyek -->
+          ${upgradeActionHtml}
+
+          <!-- Roadmap Jenjang Fasilitas Bintang (Level 1 - 6) -->
+          <div class="space-y-2 pt-1">
+            <div class="flex items-center justify-between">
+              <h4 class="text-xs uppercase tracking-wider font-extrabold text-slate-400">Roadmap Fasilitas & Kenaikan Bintang</h4>
+              <span class="text-[10px] text-slate-500">6 Tingkatan Kemewahan</span>
             </div>
             <div class="space-y-2">
               ${roadmapStepsHtml}
@@ -2854,6 +3114,8 @@ Object.assign(GameEngine.prototype, {
       `;
     }
 
+    const currentGroup = (this.state.businessGroups || []).find(g => g.id === biz.groupId);
+
     container.innerHTML = `
       <div class="mb-3 flex items-center justify-between pb-2 border-b border-slate-800">
         <button onclick="game.showOwnedBusinesses()" class="btn-press px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center gap-1">
@@ -2871,18 +3133,44 @@ Object.assign(GameEngine.prototype, {
           <img src="${sector.image}" alt="${biz.name}" class="w-full h-full object-cover" onerror="this.style.display='none'">
           <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
           
-          <div class="absolute bottom-2 left-3 right-3 flex items-end justify-between">
-            <div>
-              <div class="text-[11px] text-emerald-400 font-bold uppercase">${sector.name}</div>
-              <h3 class="font-black text-white text-lg leading-tight drop-shadow-md">${biz.name}</h3>
+          <div class="absolute bottom-2 left-3 right-3 flex items-end justify-between gap-2">
+            <div class="min-w-0 flex-1 pr-1">
+              <div class="text-[11px] text-emerald-400 font-bold uppercase flex items-center gap-1.5 flex-wrap">
+                <span>${sector.name}</span>
+                ${currentGroup ? `<span class="px-2 py-0.5 rounded bg-blue-500/80 text-slate-950 font-black text-[9px]">🏢 ${currentGroup.name}</span>` : ''}
+              </div>
+              <div class="flex items-center gap-2 mt-0.5">
+                <h3 class="font-black text-white text-base sm:text-lg leading-tight drop-shadow-md truncate">${biz.name}</h3>
+                <button onclick="game.openRenameBusinessModal('${biz.instanceId}')" class="btn-press px-2 py-0.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-[10px] font-bold flex items-center gap-1 shrink-0" title="Ubah Nama Bisnis">
+                  <span>✏️ Ubah Nama</span>
+                </button>
+              </div>
             </div>
             ${bizTax.suspended ? `
-              <span class="text-[10px] px-2.5 py-1 rounded-full bg-rose-500 text-slate-950 font-black shadow-md shadow-rose-500/20 tax-warning-pulse">
+              <span class="text-[10px] px-2.5 py-1 rounded-full bg-rose-500 text-slate-950 font-black shadow-md shadow-rose-500/20 tax-warning-pulse shrink-0">
                 ⚠️ DIBEKUKAN DJP
               </span>
             ` : ''}
           </div>
         </div>
+      </div>
+
+      <!-- Status Induk Holding / Grup Bisnis -->
+      <div class="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 mb-3 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-lg shrink-0">
+            ${currentGroup ? (currentGroup.icon || '🏢') : '🏢'}
+          </div>
+          <div class="min-w-0">
+            <span class="text-[9px] text-slate-400 uppercase font-extrabold tracking-wider block">Induk Konglomerasi</span>
+            <div class="text-xs font-black text-white truncate">
+              ${currentGroup ? `${currentGroup.name}` : '<span class="text-slate-400 font-normal">Perusahaan Independen (Tanpa Holding)</span>'}
+            </div>
+          </div>
+        </div>
+        <button onclick="game.openAssignGroupModal('${biz.instanceId}')" class="btn-press px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs flex items-center gap-1 shrink-0 shadow-sm">
+          <span>${currentGroup ? 'Pindah Grup' : '+ Gabung Grup'}</span>
+        </button>
       </div>
 
       <!-- Valuasi & Laba Bersih All-Time -->

@@ -165,10 +165,18 @@
               <h2 class="text-xs uppercase tracking-wider font-extrabold text-slate-400">Kerajaan Bisnis Aktif</h2>
               <span id="biz-owned-count" class="text-[11px] text-emerald-400 font-semibold">0 Bisnis Beroperasi</span>
             </div>
-            <button onclick="game.showBusinessCatalog()" class="btn-press px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-md shadow-emerald-500/20 flex items-center gap-1.5">
-              <span>+ Buka Bisnis Baru</span>
-            </button>
+            <div class="flex items-center gap-1.5">
+              <button onclick="game.openBusinessGroupModal()" class="btn-press px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs flex items-center gap-1">
+                <span>🏢 Grup Bisnis</span>
+              </button>
+              <button onclick="game.showBusinessCatalog()" class="btn-press px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-md shadow-emerald-500/20 flex items-center gap-1">
+                <span>+ Buka Baru</span>
+              </button>
+            </div>
           </div>
+
+          <!-- Bar Filter Grup Bisnis / Konglomerasi -->
+          <div id="biz-groups-bar" class="mb-3"></div>
 
           <div id="business-owned-list">
             <!-- Populated by JavaScript -->
@@ -775,6 +783,103 @@
           <button id="commodity-submit-order-btn" onclick="game.confirmOpenCommodityPosition()" class="btn-press w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/25 mt-1">
             Buka Posisi Kontrak LONG (Beli)
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: GANTI NAMA PERUSAHAAN (RENAME) -->
+    <div id="rename-biz-modal" class="modal-backdrop hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="modal-card bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-sm p-4 shadow-2xl relative">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <h3 class="font-bold text-white text-sm flex items-center gap-2">
+            <span>✏️</span> Ubah Nama Perusahaan
+          </h3>
+          <button onclick="game.closeRenameBizModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+        </div>
+        <div class="py-4 space-y-3 text-xs">
+          <div>
+            <label class="text-slate-300 font-bold block mb-1">Nama Perusahaan Baru:</label>
+            <input type="text" id="rename-biz-name-input" maxlength="40" placeholder="Masukkan nama bisnis..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs font-semibold focus:outline-none focus:border-emerald-500">
+            <p class="text-[10px] text-slate-500 mt-1">Nama baru akan langsung diperbarui di akta legalitas & laporan keuangan.</p>
+          </div>
+          <div class="flex gap-2 pt-2">
+            <button onclick="game.closeRenameBizModal()" class="btn-press flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs">Batal</button>
+            <button onclick="game.confirmRenameBusiness()" class="btn-press flex-1 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-md shadow-emerald-500/20">Simpan Nama</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: KELOLA GRUP BISNIS & KONGLOMERASI -->
+    <div id="business-group-modal" class="modal-backdrop hidden fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="modal-card bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-md p-4 shadow-2xl relative max-h-[90vh] flex flex-col">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
+          <div>
+            <h3 class="font-black text-white text-sm flex items-center gap-2">
+              <span>🏢</span> Grup Bisnis & Konglomerasi
+            </h3>
+            <p class="text-[11px] text-slate-400">Kelola induk holding company dan gabungkan anak perusahaan.</p>
+          </div>
+          <button onclick="game.closeBusinessGroupModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+        </div>
+
+        <div class="py-3 overflow-y-auto space-y-3.5 pr-1 text-xs grow">
+          <!-- Form Buat Grup Baru -->
+          <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2.5">
+            <div class="font-extrabold text-white text-xs flex items-center justify-between">
+              <span>+ Bentuk Grup Bisnis Baru</span>
+              <span class="text-[10px] text-emerald-400 font-medium">Holding Company</span>
+            </div>
+            <div class="flex gap-2">
+              <select id="new-group-icon-select" class="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-base text-center focus:outline-none focus:border-emerald-500 shrink-0">
+                <option value="🏢">🏢</option>
+                <option value="🏛️">🏛️</option>
+                <option value="🌐">🌐</option>
+                <option value="👑">👑</option>
+                <option value="💎">💎</option>
+                <option value="🚀">🚀</option>
+                <option value="🚢">🚢</option>
+                <option value="⚡">⚡</option>
+                <option value="🏭">🏭</option>
+              </select>
+              <input type="text" id="new-group-name-input" maxlength="32" placeholder="Nama Grup (cth: Salim Group, Maju Corp)" class="grow bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs font-semibold focus:outline-none focus:border-emerald-500">
+            </div>
+            <button onclick="game.confirmCreateBusinessGroup()" class="btn-press w-full py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-md shadow-emerald-500/20">
+              Resmikan Grup Bisnis
+            </button>
+          </div>
+
+          <!-- Daftar Grup yang Ada -->
+          <div>
+            <div class="font-bold text-slate-300 text-xs mb-2">Daftar Holding Terdaftar:</div>
+            <div id="business-groups-list" class="space-y-2">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: GABUNGKAN / PINDAHKAN KE GRUP BISNIS -->
+    <div id="assign-group-modal" class="modal-backdrop hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="modal-card bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-sm p-4 shadow-2xl relative">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div>
+            <h3 class="font-bold text-white text-sm flex items-center gap-1.5">
+              <span>🏢</span> Atur Grup Bisnis
+            </h3>
+            <p id="assign-group-biz-name" class="text-[11px] text-slate-400 font-medium">Pilih grup untuk perusahaan ini</p>
+          </div>
+          <button onclick="game.closeAssignGroupModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+        </div>
+        <div class="py-3 space-y-3 text-xs">
+          <div id="assign-group-options" class="space-y-2 max-h-60 overflow-y-auto">
+            <!-- Populated dynamically -->
+          </div>
+          <div class="pt-2 border-t border-slate-800 flex justify-between items-center">
+            <button onclick="game.closeAssignGroupModal(); game.openBusinessGroupModal();" class="btn-press text-[11px] text-emerald-400 hover:underline font-bold">+ Buat Grup Baru</button>
+            <button onclick="game.closeAssignGroupModal()" class="btn-press px-4 py-1.5 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs">Tutup</button>
+          </div>
         </div>
       </div>
     </div>

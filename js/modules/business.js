@@ -173,6 +173,8 @@ Object.assign(GameEngine.prototype, {
       sectorId: sector.sectorId,
       subTypeId: this.pendingFoundSubtypeId,
       name: bizName,
+      groupId: null,
+      stars: (sub && sub.stars) ? sub.stars : (sector.isHotel ? 2 : undefined),
       level: 1,
       foundedAt: this.state.gameHours,
       parkingCapacity: sector.isFleet ? 10 : (sector.isLogistics ? 8 : 0),
@@ -292,6 +294,10 @@ Object.assign(GameEngine.prototype, {
       const stage = FASHION_STAGES.find(s => s.level === biz.level + 1);
       if (stage && stage.upgradeDuration) return stage.upgradeDuration;
     }
+    if (biz.sectorId === 'hotel') {
+      const stage = HOTEL_STAGES.find(s => s.level === biz.level + 1);
+      if (stage && stage.upgradeDuration) return stage.upgradeDuration;
+    }
     if (biz.level === 1) return 20; // 20 detik
     if (biz.level === 2) return 45; // 45 detik
     if (biz.level === 3) return 90; // 1.5 menit
@@ -372,6 +378,11 @@ Object.assign(GameEngine.prototype, {
 
     if (biz.sectorId === 'fashion' && biz.level >= FASHION_STAGES.length) {
       this.showToast('Brand Fashion telah mencapai puncak ekspansi internasional tertinggi (Level 6)!', 'info');
+      return;
+    }
+
+    if (biz.sectorId === 'hotel' && biz.level >= HOTEL_STAGES.length) {
+      this.showToast('Hotel telah mencapai kelas kemewahan tertinggi (Level 6 Super VIP Resort)!', 'info');
       return;
     }
 
@@ -1282,5 +1293,268 @@ Object.assign(GameEngine.prototype, {
     this.saveGame();
     this.render();
     if (this.businessView === 'detail') this.renderBusinessDetail(instanceId);
+  },
+
+  // ==========================================
+  // FITUR: GANTI NAMA PERUSAHAAN (RENAME)
+  // ==========================================
+  openRenameBusinessModal(instanceId) {
+    const biz = this.state.businesses.find(b => b.instanceId === instanceId);
+    if (!biz) return;
+    this.pendingRenameBizId = instanceId;
+    const modal = document.getElementById('rename-biz-modal');
+    const input = document.getElementById('rename-biz-name-input');
+    if (input) input.value = biz.name || '';
+    if (modal) modal.classList.remove('hidden');
+  },
+
+  closeRenameBizModal() {
+    this.pendingRenameBizId = null;
+    const modal = document.getElementById('rename-biz-modal');
+    if (modal) modal.classList.add('hidden');
+  },
+
+  confirmRenameBusiness() {
+    if (!this.pendingRenameBizId) return;
+    const input = document.getElementById('rename-biz-name-input');
+    const newName = input ? input.value.trim() : '';
+    if (!newName) {
+      window.sound.playError();
+      this.showToast('Nama perusahaan tidak boleh kosong!', 'error');
+      return;
+    }
+    const biz = this.state.businesses.find(b => b.instanceId === this.pendingRenameBizId);
+    if (!biz) {
+      this.closeRenameBizModal();
+      return;
+    }
+    const oldName = biz.name;
+    biz.name = newName;
+    this.closeRenameBizModal();
+    window.sound.playCash();
+    this.showToast(`Akta legalitas diperbarui: "${oldName}" resmi berganti nama menjadi "${newName}"!`, 'success');
+    this.saveGame();
+    this.render();
+    if (this.businessView === 'detail') this.renderBusinessDetail(biz.instanceId);
+  },
+
+  // ==========================================
+  // FITUR: GRUP BISNIS / HOLDING & MERGER
+  // ==========================================
+  openBusinessGroupModal() {
+    const modal = document.getElementById('business-group-modal');
+    if (!modal) return;
+    const nameInput = document.getElementById('new-group-name-input');
+    if (nameInput) nameInput.value = '';
+    this.renderBusinessGroupList();
+    modal.classList.remove('hidden');
+  },
+
+  closeBusinessGroupModal() {
+    const modal = document.getElementById('business-group-modal');
+    if (modal) modal.classList.add('hidden');
+  },
+
+  confirmCreateBusinessGroup() {
+    const nameInput = document.getElementById('new-group-name-input');
+    const iconSelect = document.getElementById('new-group-icon-select');
+    const name = nameInput ? nameInput.value.trim() : '';
+    const icon = iconSelect ? iconSelect.value : '🏢';
+
+    if (!name) {
+      window.sound.playError();
+      this.showToast('Silakan masukkan nama grup bisnis / holding!', 'error');
+      return;
+    }
+
+    if (!Array.isArray(this.state.businessGroups)) this.state.businessGroups = [];
+
+    const newGroup = {
+      id: 'grp_' + Date.now(),
+      name: name,
+      icon: icon,
+      createdAt: Date.now()
+    };
+
+    this.state.businessGroups.push(newGroup);
+    if (nameInput) nameInput.value = '';
+    window.sound.playUpgrade();
+    this.showToast(`🎉 Grup Bisnis "${icon} ${name}" resmi berbadan hukum konglomerasi!`, 'success');
+    this.saveGame();
+    this.renderBusinessGroupList();
+    this.renderOwnedBusinesses();
+  },
+
+  deleteBusinessGroup(groupId) {
+    if (!Array.isArray(this.state.businessGroups)) return;
+    const grp = this.state.businessGroups.find(g => g.id === groupId);
+    if (!grp) return;
+
+    // Lepaskan anak perusahaan dari grup ini
+    this.state.businesses.forEach(b => {
+      if (b.groupId === groupId) {
+        b.groupId = null;
+      }
+    });
+
+    this.state.businessGroups = this.state.businessGroups.filter(g => g.id !== groupId);
+    if (this.selectedBusinessGroupId === groupId) {
+      this.selectedBusinessGroupId = null;
+    }
+
+    window.sound.playCash();
+    this.showToast(`Grup Bisnis "${grp.name}" telah dibubarkan. Anak perusahaan kini mandiri.`, 'info');
+    this.saveGame();
+    this.renderBusinessGroupList();
+    this.renderOwnedBusinesses();
+  },
+
+  renderBusinessGroupList() {
+    const container = document.getElementById('business-groups-list');
+    if (!container) return;
+
+    if (!Array.isArray(this.state.businessGroups) || this.state.businessGroups.length === 0) {
+      container.innerHTML = `
+        <div class="p-4 rounded-xl bg-slate-950/50 border border-slate-800 text-center text-slate-500 text-xs">
+          Belum ada grup bisnis yang didirikan. Buat grup di atas untuk memulai konglomerasi holding Anda!
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = this.state.businessGroups.map(grp => {
+      const members = this.state.businesses.filter(b => b.groupId === grp.id);
+      const totalRev = members.reduce((sum, b) => sum + this.calculateSingleBusinessRevenue(b), 0);
+      const totalVal = members.reduce((sum, b) => sum + this.calculateBusinessValuation(b), 0);
+      const uniqueSectors = new Set(members.map(b => b.sectorId)).size;
+      const hasSynergy = uniqueSectors >= 2;
+
+      return `
+        <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col gap-2">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-xl">${grp.icon || '🏢'}</span>
+              <div>
+                <div class="font-bold text-white text-xs">${grp.name}</div>
+                <div class="text-[10px] text-slate-400">${members.length} Anak Perusahaan (${uniqueSectors} Sektor)</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button onclick="game.filterByGroup('${grp.id}')" class="btn-press px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 text-[10px] font-bold border border-emerald-500/30">
+                Lihat Anggota
+              </button>
+              <button onclick="game.deleteBusinessGroup('${grp.id}')" class="btn-press px-2 py-1 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-[10px] font-bold border border-rose-500/20" title="Bubarkan Grup">
+                Bubarkan
+              </button>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-900 text-[11px]">
+            <div>
+              <span class="text-slate-500 text-[10px]">Valuasi Konsolidasi:</span>
+              <div class="font-extrabold text-amber-300 font-mono text-xs">${this.formatMoney(totalVal)}</div>
+            </div>
+            <div>
+              <span class="text-slate-500 text-[10px]">Dividen Konsolidasi:</span>
+              <div class="font-bold text-emerald-400 text-xs">+${this.formatCompact(totalRev)}/jam</div>
+            </div>
+          </div>
+          ${hasSynergy ? `
+            <div class="mt-1 px-2 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center gap-1.5 text-[10px] text-amber-300">
+              <span>🌟</span>
+              <span><strong>Sinergi Konglomerat Aktif:</strong> Portofolio multi-sektor holding!</span>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+  },
+
+  openAssignGroupModal(instanceId) {
+    const biz = this.state.businesses.find(b => b.instanceId === instanceId);
+    if (!biz) return;
+    this.pendingAssignGroupBizId = instanceId;
+    const modal = document.getElementById('assign-group-modal');
+    const nameEl = document.getElementById('assign-group-biz-name');
+    if (nameEl) nameEl.innerText = `Atur Induk Holding untuk "${biz.name}"`;
+
+    const container = document.getElementById('assign-group-options');
+    if (container) {
+      if (!Array.isArray(this.state.businessGroups) || this.state.businessGroups.length === 0) {
+        container.innerHTML = `
+          <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-center text-slate-400 text-xs space-y-2">
+            <div>Belum ada grup bisnis / induk holding.</div>
+            <button onclick="game.closeAssignGroupModal(); game.openBusinessGroupModal();" class="btn-press px-3 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs">
+              + Buat Grup Bisnis Sekarang
+            </button>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <!-- Opsi Independen -->
+          <label class="flex items-center justify-between p-2.5 rounded-xl border ${!biz.groupId ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-800 bg-slate-950'} cursor-pointer hover:border-slate-700 transition">
+            <div class="flex items-center gap-2">
+              <input type="radio" name="assign_group_radio" value="" ${!biz.groupId ? 'checked' : ''} onchange="game.selectGroupForBusiness(null)" class="text-emerald-500">
+              <div>
+                <div class="font-bold text-white text-xs">Perusahaan Independen</div>
+                <div class="text-[10px] text-slate-400">Berdiri sendiri tanpa naungan holding</div>
+              </div>
+            </div>
+          </label>
+        ` + this.state.businessGroups.map(grp => {
+          const isSelected = biz.groupId === grp.id;
+          const memberCount = this.state.businesses.filter(b => b.groupId === grp.id).length;
+          return `
+            <label class="flex items-center justify-between p-2.5 rounded-xl border ${isSelected ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-800 bg-slate-950'} cursor-pointer hover:border-slate-700 transition">
+              <div class="flex items-center gap-2">
+                <input type="radio" name="assign_group_radio" value="${grp.id}" ${isSelected ? 'checked' : ''} onchange="game.selectGroupForBusiness('${grp.id}')" class="text-emerald-500">
+                <span class="text-lg">${grp.icon || '🏢'}</span>
+                <div>
+                  <div class="font-bold text-white text-xs">${grp.name}</div>
+                  <div class="text-[10px] text-slate-400">${memberCount} entitas anak perusahaan</div>
+                </div>
+              </div>
+            </label>
+          `;
+        }).join('');
+      }
+    }
+
+    if (modal) modal.classList.remove('hidden');
+  },
+
+  closeAssignGroupModal() {
+    this.pendingAssignGroupBizId = null;
+    const modal = document.getElementById('assign-group-modal');
+    if (modal) modal.classList.add('hidden');
+  },
+
+  selectGroupForBusiness(groupId) {
+    if (!this.pendingAssignGroupBizId) return;
+    const biz = this.state.businesses.find(b => b.instanceId === this.pendingAssignGroupBizId);
+    if (!biz) return;
+
+    biz.groupId = groupId || null;
+    this.closeAssignGroupModal();
+    window.sound.playUpgrade();
+    if (groupId) {
+      const grp = this.state.businessGroups.find(g => g.id === groupId);
+      this.showToast(`🏢 "${biz.name}" resmi dimerger / digabungkan ke dalam grup "${grp ? grp.name : 'Holding'}"!`, 'success');
+    } else {
+      this.showToast(`"${biz.name}" kini berstatus sebagai perusahaan independen.`, 'info');
+    }
+    this.saveGame();
+    this.render();
+    if (this.businessView === 'detail') this.renderBusinessDetail(biz.instanceId);
+  },
+
+  filterByGroup(groupId) {
+    this.selectedBusinessGroupId = groupId;
+    this.closeBusinessGroupModal();
+    this.showOwnedBusinesses();
+  },
+
+  clearGroupFilter() {
+    this.selectedBusinessGroupId = null;
+    this.renderOwnedBusinesses();
   }
 });
